@@ -1,0 +1,46 @@
+all:
+  children:
+    gitlab_runners:
+      hosts:
+        192.168.1.240:
+          hostname: gitlab-runner01.example.com
+          provision:
+            vmid: "5300"
+            sockets: 1
+            cores: 4
+            memory: 8384
+            numa: false
+            clone: oracle-base
+            disks:
+              - size: "100"
+                slot: 0
+                storage: local-zfs
+        192.168.1.241:
+          hostname: gitlab-runner02.example.com
+          provision:
+            vmid: "5301"
+            sockets: 1
+            cores: 4
+            memory: 16384
+            numa: false
+            clone: ubuntu-base
+            disks:
+              - size: "100"
+                slot: 0
+                storage: local-zfs
+        192.168.1.242:
+          hostname: gitlab-runner03.example.com
+          provision:
+            vmid: "5302"
+            sockets: 1
+            cores: 4
+            memory: 16384
+            numa: false
+            clone: debian-base
+            disks:
+              - size: "100"
+                slot: 0
+                storage: local-zfs
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_user: localuser

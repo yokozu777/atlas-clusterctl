@@ -1,0 +1,130 @@
+# Public scaffold ``_template/gitlab_runner`` (exported from ``dev/gitlab``).
+# Regenerate: python3 -m clusterctl.tools.export_template --from dev/gitlab --template gitlab_runner --flatten-cascade
+# Init: ./cluster init <env>/<name> --template gitlab_runner
+#
+# Scrub live hostnames / secrets before committing the public template.
+
+schema_version: 2
+id: ''
+display_name: null
+playbooks:
+  atlas-compute-provision:
+    source: local
+    layout: roles/
+    shallow: true
+    sync: never
+    url: git@example.com:org/atlas-compute-provision.git
+    ref: main
+    entries:
+      templates:
+        file: playbooks/build_templates.yaml
+        invocations:
+        - tags: 00_ensure_workspace
+        - tags: 00_check_pve_templates,01_prepare_system
+        - tags: 02_download_images
+        - tags: 03_customize_images
+        - tags: 04_upload_images
+        - tags: 05_create_pve_templates
+        ansible:
+          strategy: linear
+          forks: 100
+      provision:
+        file: playbooks/provision_nodes.yaml
+        invocations:
+        - tags: 00_ensure_workspace
+        - tags: 00_validate_provision
+        - tags: 06_configure_git
+        - tags: 07_tf_state_pull
+        - tags: 08_generate_tf_vars
+        - tags: 09a_tf_destroy_dns
+        - tags: 09_hypervisor_cleaner
+        - tags: 10_tf_apply
+        - tags: provision_wait_ssh
+          root_ssh: true
+        - tags: 11_tf_state_push
+        git_ssh: true
+        ansible:
+          strategy: linear
+          forks: 100
+    path: atlas-compute-provision
+    path_relative_to: sibling
+  atlas-node-foundation:
+    source: local
+    layout: roles/
+    shallow: true
+    sync: never
+    url: git@example.com:org/atlas-node-foundation.git
+    ref: main
+    entries:
+      init:
+        file: playbooks/init_nodes.yaml
+        invocations:
+        - tags: 00_ensure_workspace
+        - tags: 00_gather_facts,00_init,01_backup_etc,02_init_sshd,03_configure_users,04_configure_hostname
+          limit: gitlab_runners
+          root_ssh: true
+        - tags: 06_configure_kernel,08_configure_security,09_configure_locales,10_manage_services
+          limit: gitlab_runners
+          root_ssh: true
+        - tags: 14_install_software,15_configure_journald,16_configure_bash
+          limit: gitlab_runners
+          root_ssh: true
+        - tags: 19_configure_sysctl_limits,20_disable_swap,21_grow_disk_to_full,22_extend_swap_to_root
+          limit: gitlab_runners
+          root_ssh: true
+        - tags: 17_configure_network
+          limit: gitlab_runners
+          root_ssh: true
+        - tags: 18_remove_unwanted_services
+          limit: gitlab_runners
+          root_ssh: true
+        - tags: 11_certificates
+          limit: gitlab_runners
+          root_ssh: true
+        - tags: 13_configure_repo
+          limit: gitlab_runners
+          root_ssh: true
+        - tags: 12_date_timezone
+          limit: gitlab_runners
+          root_ssh: true
+        - tags: 99_update_reboot
+          limit: gitlab_runners
+          root_ssh: true
+        git_ssh: true
+        when:
+          inventory_groups_any:
+          - gitlab_runners
+    path: atlas-node-foundation
+    path_relative_to: sibling
+  atlas-gitlab-runner:
+    source: local
+    layout: roles/
+    shallow: true
+    sync: never
+    url: git@example.com:org/atlas-gitlab-runner.git
+    ref: main
+    entries:
+      runner:
+        file: playbooks/gitlab_runner.yaml
+        invocations:
+        - tags: 00_ensure_workspace
+        - tags: 01_validate_vars
+        - tags: 02_ensure_runner_token
+        - tags: 03_install_runner
+          limit: gitlab_runners
+        git_ssh: true
+        when:
+          inventory_groups_any:
+          - gitlab_runners
+    path: atlas-gitlab-runner
+    path_relative_to: sibling
+phases:
+- provision: atlas-compute-provision/provision
+- init: atlas-node-foundation/init
+- gitlab-runner: atlas-gitlab-runner/runner
+execution:
+  mode: local
+  image: yokozu/krang
+  tag: '336'
+cluster_id_aliases: {}
+inventory: hosts

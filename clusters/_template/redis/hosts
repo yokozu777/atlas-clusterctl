@@ -1,0 +1,146 @@
+all:
+  children:
+    redis:
+      children:
+        redis_lbs:
+          hosts:
+            # Mixed-OS SoT: ../MIXED_OS_KAFKA_REDIS.md (Phase 2 applied)
+            192.168.1.240:
+              hostname: redis-lb01.example.com
+              provision:
+                vmid: "5710"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.241:
+              hostname: redis-lb02.example.com
+              provision:
+                vmid: "5711"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: oracle-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+        redis_proxies:
+          hosts:
+            192.168.1.242:
+              hostname: redis-proxy01.example.com
+              provision:
+                vmid: "5712"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: debian-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.243:
+              hostname: redis-proxy02.example.com
+              provision:
+                vmid: "5713"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: oracle-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+        redis_cluster_masters:
+          hosts:
+            192.168.1.244:
+              hostname: redis-master01.example.com
+              provision:
+                vmid: "5714"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.245:
+              hostname: redis-master02.example.com
+              provision:
+                vmid: "5715"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: oracle-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.246:
+              hostname: redis-master03.example.com
+              provision:
+                vmid: "5716"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: debian-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+        redis_cluster_replicas:
+          hosts:
+            192.168.1.247:
+              hostname: redis-replica01.example.com
+              provision:
+                vmid: "5717"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.248:
+              hostname: redis-replica02.example.com
+              provision:
+                vmid: "5718"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: oracle-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.249:
+              hostname: redis-replica03.example.com
+              provision:
+                vmid: "5719"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: debian-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_user: localuser

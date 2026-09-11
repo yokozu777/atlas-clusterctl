@@ -1,0 +1,43 @@
+# Jenkins controller + agent install (atlas-jenkins-agent)
+# Orchestration contract: docs/stacks/jenkins-agent.md
+#
+# Inventory group targeting (must match hosts + cluster.yaml limits / when).
+
+# Leaf DNS identity
+# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+dns_domain_suffix: example.com
+cluster_domain: "jenkins.{{ dns_domain_suffix }}"
+
+jenkins_agent_hosts: jslave
+
+jenkins_url: https://jenkins.example.com
+jenkins_admin_user: admin
+# Override in atlas-jenkins-agent.secrets.yml (ansible-vault recommended)
+
+# CA for Jenkins controller TLS (jenkins.example.com).
+# OS trust installs both roots via foundation pki_ca_url; this path is the
+# ca.example.com file used for Java/curl to the controller.
+jenkins_ca_cert_path: "/usr/local/share/ca-certificates/ca-example-com.crt"
+jenkins_ca_cert_download_url: "https://ca.example.com:8443/roots.pem"
+
+jenkins_agent_num_executors: 5
+# Docker Hub pull-through on ci/infra (not Nexus). SNI host = docker-io.<registry>.
+jenkins_docker_registry_mirrors:
+  - "https://docker-io.registry.example.com"
+
+# --- Package repos (Phase 4) — prefer foundation drop-ins; fallback = site nginx ---
+pkg_repo_base: ""
+pkg_repo_nginx_ingress_domain: "repo.example.com"
+pkg_repo_upstreams: []
+
+# --- Agent OS packages (Jenkinsfile.local / clusterctl local execute) ---
+# Ubuntu/Debian: python3-yaml (PyYAML) + ansible-core (ansible-galaxy)
+# Oracle Linux: python3-pyyaml + ansible-core (EPEL)
+jenkins_agent_debian_packages_extra:
+  - certbot
+  - python3-yaml
+  - ansible-core
+jenkins_agent_oracle_packages_extra:
+  - certbot
+  - python3-pyyaml
+  - ansible-core

@@ -1,0 +1,27 @@
+# Org baseline (cascade layer 1) — NOT deployable.
+# Customize org-wide playbooks, phases (inline aliases), and execution for your organization.
+# Reference full k8s config: clusters/_template/k8s_full/
+# Merged into every clusters/<env>/<name>/ leaf unless the leaf replaces sections.
+# Do not add stacks: — plan SoT is phases: only (ADR 005).
+# Do not add phase_aliases: — short names live inline in phases: (ADR 007).
+
+schema_version: 2
+id: default/default
+display_name: Org baseline (customize)
+
+# playbooks:
+#   atlas-compute-provision:
+#     source: git
+#     url: git@example.com/org/atlas-compute-provision.git
+#     ref: main
+#     layout: roles/
+#     entries: { ... }
+
+# phases:
+#   - templates: atlas-compute-provision/templates
+#   - provision: atlas-compute-provision/provision
+
+# execution:
+#   mode: docker
+#   image: yokozu/krang
+#   tag: "336"

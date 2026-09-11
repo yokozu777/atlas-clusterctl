@@ -1,0 +1,40 @@
+# Public scaffold ``_template/pve_templates`` (exported from ``dev/pve-templates``).
+# Regenerate: python3 -m clusterctl.tools.export_template --from dev/pve-templates --template pve_templates --flatten-cascade
+# Init: ./cluster init <env>/<name> --template pve_templates
+#
+# Scrub live hostnames / secrets before committing the public template.
+
+schema_version: 2
+id: ''
+display_name: null
+playbooks:
+  atlas-compute-provision:
+    source: local
+    layout: roles/
+    shallow: true
+    sync: never
+    url: git@example.com:org/atlas-compute-provision.git
+    ref: main
+    entries:
+      templates:
+        file: playbooks/build_templates.yaml
+        invocations:
+        - tags: 00_ensure_workspace
+        - tags: 00_check_pve_templates,01_prepare_system
+        - tags: 02_download_images
+        - tags: 03_customize_images
+        - tags: 04_upload_images
+        - tags: 05_create_pve_templates
+        ansible:
+          strategy: linear
+          forks: 100
+    path: atlas-compute-provision
+    path_relative_to: sibling
+phases:
+- templates: atlas-compute-provision/templates
+execution:
+  mode: local
+  image: yokozu/krang
+  tag: '336'
+inventory: hosts
+cluster_id_aliases: {}

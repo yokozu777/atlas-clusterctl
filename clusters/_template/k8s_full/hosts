@@ -1,0 +1,130 @@
+all:
+  children:
+    k8s_lbs:
+      hosts:
+        192.168.1.240:
+          hostname: lb1.example.com
+          provision:
+            vmid: '220'
+            sockets: 1
+            cores: 2
+            memory: 4096
+            numa: false
+            clone: ubuntu-base
+            disks:
+            - size: '70'
+              slot: 0
+              storage: local-zfs
+        192.168.1.241:
+          hostname: lb2.example.com
+          provision:
+            vmid: '221'
+            sockets: 1
+            cores: 2
+            memory: 4096
+            numa: false
+            clone: debian-base
+            disks:
+            - size: '70'
+              slot: 0
+              storage: local-zfs
+    k8s_masters:
+      hosts:
+        192.168.1.242:
+          hostname: kubemaster01.example.com
+          provision:
+            vmid: '225'
+            sockets: 1
+            cores: 2
+            memory: 8096
+            numa: false
+            clone: debian-base
+            disks:
+            - size: '70'
+              slot: 0
+              storage: local-zfs
+        192.168.1.243:
+          hostname: kubemaster02.example.com
+          provision:
+            vmid: '226'
+            sockets: 1
+            cores: 2
+            memory: 8096
+            numa: false
+            clone: ubuntu-base
+            disks:
+            - size: '70'
+              slot: 0
+              storage: local-zfs
+        192.168.1.244:
+          hostname: kubemaster03.example.com
+          provision:
+            vmid: '227'
+            sockets: 1
+            cores: 2
+            memory: 8096
+            numa: false
+            clone: oracle-base
+            disks:
+            - size: '70'
+              slot: 0
+              storage: local-zfs
+    k8s_workers:
+      hosts:
+        192.168.1.245:
+          hostname: kubeworker02.example.com
+          provision:
+            vmid: '233'
+            sockets: 1
+            cores: 7
+            memory: 25000
+            numa: false
+            clone: debian-base
+            disks:
+            - size: '70'
+              slot: 0
+              storage: local-zfs
+            - size: '300'
+              slot: 1
+              storage: local-zfs
+              wwn: '0x5000c500c35cd233'
+              serial: drive233
+        192.168.1.246:
+          hostname: kubeworker03.example.com
+          provision:
+            vmid: '234'
+            sockets: 1
+            cores: 7
+            memory: 25000
+            numa: false
+            clone: ubuntu-base
+            disks:
+            - size: '70'
+              slot: 0
+              storage: local-zfs
+            - size: '300'
+              slot: 1
+              storage: local-zfs
+              wwn: '0x5000c500c35cd234'
+              serial: drive234
+        192.168.1.247:
+          hostname: kubeworker06.example.com
+          provision:
+            vmid: '236'
+            sockets: 1
+            cores: 7
+            memory: 25000
+            numa: false
+            clone: oracle-base
+            disks:
+            - size: '70'
+              slot: 0
+              storage: local-zfs
+            - size: '300'
+              slot: 1
+              storage: local-zfs
+              wwn: '0x5000c500c35cd236'
+              serial: drive236
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_user: localuser

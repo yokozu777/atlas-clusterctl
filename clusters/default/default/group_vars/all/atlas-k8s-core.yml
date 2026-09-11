@@ -1,0 +1,21 @@
+# atlas-k8s-core vars — customize for your stack.
+# Reference: clusters/_template/k8s_full/group_vars/all/atlas-k8s-core.yml
+
+# ---------------------------------------------------------------------------
+# Controller / targeting (paths use injected workspace)
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Controller / targeting (paths use injected workspace)
+# ---------------------------------------------------------------------------
+
+# Leaf DNS identity
+# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+dns_domain_suffix: example.com
+cluster_domain: "k8s.{{ dns_domain_suffix }}"
+k8s_cluster_domain: "{{ cluster_domain }}"
+
+admin_user: localuser
+k8s_admin_user: "{{ admin_user }}"  # compat alias for atlas-k8s-core / addons
+controller_workspace: "{{ cluster_workspace_root }}/controller-state"
+controller_kubeconfig: "{{ controller_workspace }}/kubeconfig/admin.conf"

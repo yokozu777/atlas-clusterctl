@@ -1,0 +1,6 @@
+# Prepare second data disk on workers (whole disk for Rook Ceph)
+# Target disk(s): provision.disks[].wwn|serial from hosts inventory (role 23_init_data_disk)
+prepare_data_disk: true
+prepare_data_disk_use_inventory: true
+prepare_data_disk_mode: raw
+prepare_data_disk_min_size_gib: 50

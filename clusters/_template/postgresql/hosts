@@ -1,0 +1,130 @@
+all:
+  children:
+    postgresql:
+      children:
+        pgsql_etcd_cluster:
+          hosts:
+            192.168.1.240:
+              hostname: pgsql-etcd01.example.com
+              provision:
+                vmid: "5700"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.241:
+              hostname: pgsql-etcd02.example.com
+              provision:
+                vmid: "5703"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: oracle-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.242:
+              hostname: pgsql-etcd03.example.com
+              provision:
+                vmid: "5704"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: debian-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+        pgsql_cluster:
+          hosts:
+            192.168.1.243:
+              hostname: pgsql-01.example.com
+              provision:
+                vmid: "5701"
+                sockets: 1
+                cores: 4
+                memory: 8192
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "100"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.244:
+              hostname: pgsql-02.example.com
+              provision:
+                vmid: "5705"
+                sockets: 1
+                cores: 4
+                memory: 8192
+                numa: false
+                clone: oracle-base
+                disks:
+                  - size: "100"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.245:
+              hostname: pgsql-03.example.com
+              provision:
+                vmid: "5706"
+                sockets: 1
+                cores: 4
+                memory: 8192
+                numa: false
+                clone: debian-base
+                disks:
+                  - size: "100"
+                    slot: 0
+                    storage: local-zfs
+        pgsql_lbs:
+          hosts:
+            192.168.1.246:
+              hostname: pgsql-lb01.example.com
+              provision:
+                vmid: "5702"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.247:
+              hostname: pgsql-lb02.example.com
+              provision:
+                vmid: "5707"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: oracle-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.248:
+              hostname: pgsql-lb03.example.com
+              provision:
+                vmid: "5708"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: debian-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_user: localuser

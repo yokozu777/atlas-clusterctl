@@ -1,0 +1,49 @@
+# atlas-clusterctl local config (controller checkout).
+#
+# Setup:
+#   cp .config/config.yaml.example .config/config.yaml
+#   # then edit paths below
+#
+# Runtime location (gitignored):
+#   $ATLAS_CLUSTER_ROOT/.config/config.yaml
+#
+# Override config file: ATLAS_CLUSTERCTL_CONFIG=/path/to/config.yaml
+#
+# Relative paths are resolved against ATLAS_CLUSTER_ROOT (this clone),
+# not against .config/.
+# Absolute paths are used as-is.
+#
+# --- clusters (live inventory) ---
+#   1. ATLAS_CLUSTERS_ROOT
+#   2. clusters.path  (this file)
+#   3. $ATLAS_CLUSTER_ROOT/clusters
+#
+# Templates (`clusters/_template`) and public org stubs (`clusters/default`)
+# always stay in this checkout.
+#
+# --- workspace (runtime parent) ---
+#   1. ATLAS_WORKSPACE_ROOT
+#   2. workspace.path  (this file)
+#   3. $ATLAS_CLUSTER_ROOT/workspace
+#
+# Per-cluster trees live under <workspace.path>/<env>/<name>/
+# (same hierarchy as clusters/<env>/<name>/).
+#
+# Durable Terraform state (not configured here): $ATLAS_CLUSTER_ROOT/tfstate/<env>/<name>/
+# (Ansible: provision_tf_state_local_dir + provision_tf_state_cluster_path).
+
+clusters:
+  # Sibling private inventory (recommended for org labs):
+  path: ../atlas-inventory/clusters
+  # Or absolute:
+  # path: /home/you/git/atlas-inventory/clusters
+
+workspace:
+  # Default when omitted: <ATLAS_CLUSTER_ROOT>/workspace
+  # path: ../atlas-runtime/workspace
+  # path: /var/lib/atlas-clusterctl/workspace
+
+# Lowest-priority SSH identity for `./cluster repos sync` / git clone of playbooks.
+# Overridden by GIT_SSH_COMMAND (with -i), PLAYBOOKS_<REPO>_SSH_KEY, or hub UI secrets.
+# git:
+#   ssh_key: ~/.ssh/id_ed25519

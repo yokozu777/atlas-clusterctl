@@ -1,0 +1,401 @@
+// atlas-clusterctl — manual seed job
+//   CLUSTER_ID Phase 0–5 + PHASES follow-up (ADR 010 cascade) + LIMIT follow-up
+//   Phase 0–5 (map artifact + Active Choices cascade / ADR 011).
+//   UI SoT for deploy params.
+//
+// Script path: examples/internal/seed/Jenkinsfile
+// Contract: docs/jenkins-seed.md
+//   PHASES cascade: docs/adr/010-jenkins-phases-active-choices.md
+//   LIMIT cascade:  docs/adr/011-jenkins-limits-active-choices.md
+//
+// Requires Job DSL + Active Choices (uno-choice). Checkout this repo as the seed
+// job SCM, then Build manually after inventory changes. No cron / webhook in scope.
+//
+// Flow: inventory checkout → list_deployable_clusters → list_cluster_phases
+// map → list_cluster_limits map → Job DSL refreshes deploy job(s): CLUSTER_ID
+// choice, PHASES Active Choices (CLUSTER_PHASES_JSON), LIMIT Active Choices
+// (CLUSTER_LIMITS_JSON / ADR 011).
+// Each seed Build rewrites deploy job params + SCM (see jenkins-seed.md).
+
+pipeline {
+    agent {
+        label "${params.AGENT ?: 'built-in'}"
+    }
+
+    parameters {
+        string(
+            name: 'AGENT',
+            defaultValue: 'built-in',
+            description: 'Jenkins agent label for the seed run'
+        )
+        string(
+            name: 'INVENTORY_GIT_URL',
+            defaultValue: 'ssh://git@gitea.mxhash.com/root/atlas-inventory.git',
+            description: 'Inventory git URL (required for seed scan); prefer ssh://git@host/path'
+        )
+        string(
+            name: 'INVENTORY_GIT_REF',
+            defaultValue: 'main',
+            description: 'Inventory branch name (not a commit SHA; shallow clone uses --branch)'
+        )
+        string(
+            name: 'INVENTORY_DIR',
+            defaultValue: 'atlas-inventory',
+            description: 'Checkout directory for inventory'
+        )
+        booleanParam(
+            name: 'INVENTORY_RESET_HARD',
+            defaultValue: true,
+            description: 'Align inventory checkout to origin (git reset --hard). Default on for seed scan; uncheck to keep local ahead/diverged commits'
+        )
+        string(
+            name: 'CLUSTERCTL_GIT_URL',
+            defaultValue: 'ssh://git@gitea.mxhash.com/root/atlas-clusterctl.git',
+            description: 'atlas-clusterctl git URL for deploy job SCM (Job DSL); prefer ssh://git@host/path'
+        )
+        string(
+            name: 'CLUSTERCTL_GIT_REF',
+            defaultValue: 'main',
+            description: 'Deploy job SCM branch name (not a commit SHA)'
+        )
+        text(
+            name: 'DEPLOY_SPECS',
+            defaultValue: '''atlas-clusterctl-local|examples/internal/Jenkinsfile.local
+atlas-clusterctl|examples/internal/Jenkinsfile''',
+            description: 'One deploy job per line: JOB_NAME|scriptPath (relative to atlas-clusterctl)'
+        )
+        string(
+            name: 'PREFER_CLUSTER_ID',
+            defaultValue: 'ci/postgresql',
+            description: 'If present in scan results, put first in CLUSTER_ID choices'
+        )
+        string(
+            name: 'GIT_SSH_CREDENTIALS_ID',
+            defaultValue: 'ssh_git',
+            description: 'SSH credential id for inventory + deploy SCM (empty = agent default)'
+        )
+        string(
+            name: 'INVENTORY_GIT_URL_DEFAULT',
+            defaultValue: 'ssh://git@gitea.mxhash.com/root/atlas-inventory.git',
+            description: 'Default INVENTORY_GIT_URL written into deploy job parameters (ssh:// form)'
+        )
+    }
+
+    environment {
+        INVENTORY_GIT_URL = "${params.INVENTORY_GIT_URL}"
+        INVENTORY_GIT_REF = "${params.INVENTORY_GIT_REF}"
+        INVENTORY_DIR = "${params.INVENTORY_DIR}"
+        INVENTORY_RESET_HARD = "${params.INVENTORY_RESET_HARD}"
+        PREFER_CLUSTER_ID = "${params.PREFER_CLUSTER_ID}"
+        GIT_SSH_CREDENTIALS_ID = "${params.GIT_SSH_CREDENTIALS_ID}"
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '25'))
+        timestamps()
+        ansiColor('xterm')
+    }
+
+    stages {
+        stage('Prepare') {
+            steps {
+                sh '''
+                    set -euo pipefail
+                    chmod +x ./cluster || true
+                    test -f examples/internal/seed/seed_deploy_jobs.groovy
+                    test -f clusterctl/tools/list_deployable_clusters.py
+                    test -f clusterctl/tools/list_cluster_phases.py
+                    test -f clusterctl/tools/list_cluster_limits.py
+                '''
+            }
+        }
+
+        stage('Inventory checkout') {
+            steps {
+                script {
+                    def credId = params.GIT_SSH_CREDENTIALS_ID?.trim()
+                    def body = {
+                        sh '''
+                            set -euo pipefail
+                            export INV_DIR="${INVENTORY_DIR:-atlas-inventory}"
+                            export INV_URL="${INVENTORY_GIT_URL:?INVENTORY_GIT_URL required}"
+                            export INV_REF="${INVENTORY_GIT_REF:-main}"
+                            export INV_FETCH_MODE=shallow
+                            export INV_RESET_HARD="${INVENTORY_RESET_HARD:-true}"
+                            bash examples/internal/ci/prepare_inventory_checkout.sh
+                        '''
+                    }
+                    if (credId) {
+                        withCredentials([sshUserPrivateKey(credentialsId: credId, keyFileVariable: 'SSH_KEY')]) {
+                            withEnv(["GIT_SSH_COMMAND=ssh -i ${SSH_KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=no"]) {
+                                body()
+                            }
+                        }
+                    } else {
+                        body()
+                    }
+                }
+            }
+        }
+
+        stage('List deployable clusters') {
+            steps {
+                sh '''
+                    bash -euo pipefail <<'EOF'
+                    INV_DIR="${INVENTORY_DIR:-atlas-inventory}"
+                    PREFER="${PREFER_CLUSTER_ID:-}"
+                    prefer_args=()
+                    if [ -n "${PREFER}" ]; then
+                      prefer_args+=(--prefer "${PREFER}")
+                    fi
+                    python3 -m clusterctl.tools.list_deployable_clusters \
+                      --clusters-root "${INV_DIR}/clusters" \
+                      "${prefer_args[@]}" \
+                      | tee examples/internal/seed/cluster-ids.txt
+                    test -s examples/internal/seed/cluster-ids.txt
+                    echo "seed: $(wc -l < examples/internal/seed/cluster-ids.txt) deployable id(s)"
+EOF
+                '''
+            }
+        }
+
+        stage('List cluster phases map') {
+            steps {
+                sh '''
+                    bash -euo pipefail <<'EOF'
+                    INV_DIR="${INVENTORY_DIR:-atlas-inventory}"
+                    OUT="examples/internal/seed/cluster-phases.json"
+                    IDS="examples/internal/seed/cluster-ids.txt"
+                    # YAML map (CLUSTER_ID → short names) for artifact + Job DSL embed (ADR 010).
+                    # Inventory clusters/ only (no --product-clusters-root on seed).
+                    # No when: — may differ from empty-PHASES plan SoT. --allow-empty OK.
+                    python3 -m clusterctl.tools.list_cluster_phases \
+                      --clusters-root "${INV_DIR}/clusters" \
+                      --all \
+                      --allow-empty \
+                      > "${OUT}"
+                    python3 - <<'PY'
+import json
+import sys
+from pathlib import Path
+
+from clusterctl.tools.list_cluster_phases import ids_missing_from_phases_map
+
+ids_path = Path("examples/internal/seed/cluster-ids.txt")
+map_path = Path("examples/internal/seed/cluster-phases.json")
+data = json.loads(map_path.read_text(encoding="utf-8"))
+if not isinstance(data, dict):
+    raise SystemExit(
+        f"seed: {map_path} must be a JSON object, got {type(data).__name__}"
+    )
+ids = [
+    ln.strip()
+    for ln in ids_path.read_text(encoding="utf-8").splitlines()
+    if ln.strip()
+]
+print(f"seed: phases map for {len(data)} leaf(ves) → {map_path}")
+for cid, phases in sorted(data.items()):
+    print(f"  {cid}: {', '.join(phases)}")
+missing = ids_missing_from_phases_map(ids, data)
+if missing:
+    print(
+        f"seed: warning: {len(missing)} deployable id(s) without phases: "
+        + ", ".join(missing),
+        file=sys.stderr,
+    )
+else:
+    print("seed: all deployable ids present in phases map")
+PY
+EOF
+                '''
+            }
+        }
+
+        stage('List cluster limits map') {
+            steps {
+                sh '''
+                    bash -euo pipefail <<'EOF'
+                    INV_DIR="${INVENTORY_DIR:-atlas-inventory}"
+                    OUT="examples/internal/seed/cluster-limits.json"
+                    IDS="examples/internal/seed/cluster-ids.txt"
+                    # YAML inventory map (CLUSTER_ID → Active Choices value→label)
+                    # for artifact + Job DSL binding (ADR 011). Inventory clusters/
+                    # only (no --product-clusters-root on seed). Hierarchical UI:
+                    # group then nested hosts; hostname: in labels. --allow-empty OK.
+                    # --ui required for checkbox labels (flat list is CLI-only).
+                    python3 -m clusterctl.tools.list_cluster_limits \
+                      --clusters-root "${INV_DIR}/clusters" \
+                      --all \
+                      --allow-empty \
+                      --ui \
+                      > "${OUT}"
+                    python3 - <<'PY'
+import json
+import sys
+from pathlib import Path
+
+from clusterctl.tools.list_cluster_limits import ids_missing_from_limits_map
+
+ids_path = Path("examples/internal/seed/cluster-ids.txt")
+map_path = Path("examples/internal/seed/cluster-limits.json")
+data = json.loads(map_path.read_text(encoding="utf-8"))
+if not isinstance(data, dict):
+    raise SystemExit(
+        f"seed: {map_path} must be a JSON object, got {type(data).__name__}"
+    )
+ids = [
+    ln.strip()
+    for ln in ids_path.read_text(encoding="utf-8").splitlines()
+    if ln.strip()
+]
+print(f"seed: limits map for {len(data)} leaf(ves) → {map_path}")
+for cid, names in sorted(data.items()):
+    if isinstance(names, list) and names and isinstance(names[0], dict):
+        print(f"  {cid}: {len(names)} choice(s) (ui entries)")
+        for entry in names:
+            value = entry.get("value", "")
+            label = entry.get("label", value)
+            print(f"    {value} → {label}")
+    elif isinstance(names, list):
+        print(f"  {cid}: {', '.join(str(n) for n in names)}")
+    elif isinstance(names, dict):
+        print(f"  {cid}: {len(names)} choice(s) (ui map)")
+        for value, label in names.items():
+            print(f"    {value} → {label}")
+    else:
+        print(f"  {cid}: {names!r}")
+missing = ids_missing_from_limits_map(ids, data)
+if missing:
+    print(
+        f"seed: warning: {len(missing)} deployable id(s) without limits catalog: "
+        + ", ".join(missing),
+        file=sys.stderr,
+    )
+else:
+    print("seed: all deployable ids present in limits map")
+PY
+EOF
+                '''
+            }
+        }
+
+        stage('Job DSL') {
+            steps {
+                script {
+                    def ids = readFile('examples/internal/seed/cluster-ids.txt').trim()
+                    if (!ids) {
+                        error('seed: empty deployable id list — refusing to update jobs')
+                    }
+                    def specs = (params.DEPLOY_SPECS ?: '').trim()
+                    if (!specs) {
+                        error('seed: DEPLOY_SPECS is empty')
+                    }
+                    def phasesJson = readFile('examples/internal/seed/cluster-phases.json').trim()
+                    if (!phasesJson) {
+                        phasesJson = '{}'
+                    }
+                    def limitsJson = readFile('examples/internal/seed/cluster-limits.json').trim()
+                    if (!limitsJson) {
+                        limitsJson = '{}'
+                    }
+                    // AGENT choices: inventory hostnames (jenkins leaves) + optional
+                    // controller computers. Pipeline Jenkins.* is often sandbox-blocked
+                    // (silently → built-in only); inventory scrape does not need it.
+                    def invDir = (params.INVENTORY_DIR ?: 'atlas-inventory').toString().trim() ?: 'atlas-inventory'
+                    if (!(invDir ==~ /^[A-Za-z0-9._\\/-]+$/)) {
+                        error("seed: unsafe INVENTORY_DIR: ${invDir}")
+                    }
+                    def agentText = sh(
+                        returnStdout: true,
+                        script: """
+set -euo pipefail
+export INV_DIR='${invDir}'
+python3 - <<'PY'
+import os, re
+from pathlib import Path
+
+inv = Path(os.environ.get("INV_DIR") or "atlas-inventory")
+names = {"built-in"}
+
+def add_hostname(raw):
+    h = (raw or "").strip().strip('"').strip("'")
+    if not h or h in ("master", "(master)", "Built-In Node"):
+        return
+    names.add(h)
+
+# Capture token after hostname:; strip optional quotes in add_hostname.
+host_re = re.compile(r"(?m)^\\s*hostname:\\s*(\\S+)")
+if inv.is_dir():
+    for path in inv.rglob("hosts"):
+        rel = str(path).replace("\\\\", "/").lower()
+        text = path.read_text(encoding="utf-8", errors="replace")
+        in_jenkins_leaf = "/jenkins/" in rel or rel.endswith("/jenkins/hosts")
+        for m in host_re.finditer(text):
+            h = m.group(1)
+            if in_jenkins_leaf or "jenkins" in h.lower() or h.lower().startswith("jslave"):
+                add_hostname(h)
+
+ordered = ["built-in"] + sorted(n for n in names if n != "built-in")
+print("\\n".join(ordered))
+PY
+"""
+                    ).trim()
+                    def agentChoices = agentText.readLines().collect { it.trim() }.findAll { it } as Set
+                    if (agentChoices.isEmpty()) {
+                        agentChoices = ['built-in'] as Set
+                    }
+                    // Optional: merge live Jenkins computers when Pipeline sandbox allows it.
+                    try {
+                        def j = jenkins.model.Jenkins.getInstanceOrNull()
+                        if (j != null) {
+                            j.getComputers().each { c ->
+                                def n = c?.getName()
+                                if (n == null || n.isEmpty() || n == 'master' || n == '(master)') {
+                                    agentChoices << 'built-in'
+                                } else {
+                                    agentChoices << n
+                                }
+                            }
+                            echo 'seed: merged controller computers into AGENT choices'
+                        } else {
+                            echo 'seed: Jenkins.getInstanceOrNull() == null; AGENT from inventory only'
+                        }
+                    } catch (Throwable t) {
+                        echo "seed: controller computer merge skipped (${t.class.simpleName}); AGENT from inventory"
+                    }
+                    def agentList = (['built-in'] + (agentChoices as List).findAll { it != 'built-in' }.sort()).unique()
+                    echo "seed: AGENT choices (${agentList.size()}): ${agentList.join(', ')}"
+                    if (agentList.size() <= 1) {
+                        echo 'seed: WARNING: only built-in — check inventory checkout and jenkins/*/hosts hostname: fields'
+                    }
+                    writeFile file: 'examples/internal/seed/agent-choices.txt', text: agentList.join('\n') + '\n'
+                    jobDsl(
+                        targets: 'examples/internal/seed/seed_deploy_jobs.groovy',
+                        removedJobAction: 'IGNORE',
+                        removedViewAction: 'IGNORE',
+                        lookupStrategy: 'SEED_JOB',
+                        additionalParameters: [
+                            CLUSTER_IDS            : ids,
+                            CLUSTER_PHASES_JSON    : phasesJson,
+                            CLUSTER_LIMITS_JSON    : limitsJson,
+                            AGENT_CHOICES          : agentList.join('\n'),
+                            DEPLOY_SPECS           : specs,
+                            CLUSTERCTL_GIT_URL     : params.CLUSTERCTL_GIT_URL,
+                            CLUSTERCTL_GIT_REF     : params.CLUSTERCTL_GIT_REF,
+                            GIT_SSH_CREDENTIALS_ID : params.GIT_SSH_CREDENTIALS_ID ?: '',
+                            INVENTORY_GIT_URL_DEFAULT: params.INVENTORY_GIT_URL_DEFAULT ?: '',
+                        ]
+                    )
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // allowEmptyArchive: true — OK if a stage failed before writing files;
+            // the build is still red from the failed stage.
+            archiveArtifacts artifacts: 'examples/internal/seed/cluster-ids.txt,examples/internal/seed/cluster-phases.json,examples/internal/seed/cluster-limits.json,examples/internal/seed/agent-choices.txt', allowEmptyArchive: true
+        }
+    }
+}

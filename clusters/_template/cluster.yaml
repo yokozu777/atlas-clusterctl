@@ -1,0 +1,17 @@
+schema_version: 2
+id: ""
+display_name: null
+inventory: hosts
+
+# Org baseline SoT (playbooks, phases with inline aliases — ADR 007):
+#   clusters/default/default/cluster.yaml
+# After init, set id (e.g. lab/foo), display_name, and Leaf DNS in atlas-*.yml
+# (--dns-suffix patches dns_domain_suffix only; cluster_domain prefix is template-owned).
+# Optional playbooks overrides deep-merge into the cascade.
+# Do not add phase_aliases: — short names live inline in phases:.
+
+execution:
+  mode: local
+  image: yokozu/krang
+  tag: "336"
+

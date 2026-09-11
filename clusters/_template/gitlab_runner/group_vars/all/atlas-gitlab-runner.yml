@@ -1,0 +1,55 @@
+# GitLab runners install (atlas-gitlab-runner)
+# Orchestration contract: docs/stacks/gitlab-runner.md
+#
+# Inventory group targeting (must match hosts + cluster.yaml limits / when).
+
+# Leaf DNS identity
+# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+dns_domain_suffix: example.com
+cluster_domain: "gitlab-runner.{{ dns_domain_suffix }}"
+
+gitlab_runner_hosts: gitlab_runners
+
+gitlab_url: https://gitlab.example.com
+gitlab_runner_executor: shell
+# Auto-create per-host glrt-… via API (idempotent: secrets → config.toml → API).
+# Description defaults to atlas:{{ cluster_domain }}:{{ hostname }} (one UI row per VM).
+# Migration: delete the old shared runner "atlas:gitlab-runner.example.com" in GitLab Admin
+# after cutover so it does not linger beside the new per-host runners.
+gitlab_runner_token_auto_create: true
+gitlab_runner_api_runner_type: instance_type
+# Override token in atlas-gitlab-runner.secrets.yml (ansible-vault recommended)
+
+# CA for GitLab TLS — foundation-style fetch into distro trust dir.
+# Path value is a basename hint only (ca-example-com.crt); role resolves
+# Debian → /usr/local/share/ca-certificates/, OL → anchors (same as 11_certificates).
+# URLs: pki_ca_url (foundation overlay) + optional download_url below.
+gitlab_runner_ca_cert_path: "/usr/local/share/ca-certificates/ca-example-com.crt"
+gitlab_runner_ca_cert_download_url: "https://ca.example.com:8443/roots.pem"
+
+gitlab_runner_concurrent: 4
+# Docker Hub pull-through on ci/infra (not Nexus). SNI host = docker-io.<registry>.
+gitlab_docker_registry_mirrors:
+  - "https://docker-io.registry.example.com"
+
+# --- Package repos (Phase 4) — prefer foundation drop-ins; fallback = site nginx ---
+pkg_repo_base: ""
+pkg_repo_nginx_ingress_domain: "repo.example.com"
+pkg_repo_upstreams: []
+
+# --- Runner OS packages (clusterctl local / shell CI) ---
+gitlab_runner_debian_packages_extra:
+  - certbot
+  - python3-yaml
+  - ansible-core
+gitlab_runner_oracle_packages_extra:
+  - certbot
+  - python3-pyyaml
+  - ansible-core
+
+# Docker executor knobs (when gitlab_runner_executor=docker)
+gitlab_runner_docker_image: alpine:3.20
+gitlab_runner_docker_privileged: false
+gitlab_runner_docker_volumes:
+  - "/cache"
+gitlab_runner_docker_pull_policy: if-not-present

@@ -1,0 +1,179 @@
+###############################################################################
+# Cluster leaf: dev/k8s — client bridge to shared infra (ci/infra)
+# -----------------------------------------------------------------------------
+# Purpose : Pull-mode knobs for k8s-core / k8s-addons / node-foundation
+# SoT     : clusters/ci/infra (BIND / CA / registry / pkg+helm caches)
+# Docs    : docs/stacks/infra-edge.md
+#
+# Do NOT run infra / init-infra phases from this cluster:
+#   ./cluster use ci/infra && ./cluster run --phases templates..infra
+# Server-side compose paths stay on ci/infra.
+###############################################################################
+
+# =============================================================================
+# Site identity (shared infra platform)
+# =============================================================================
+# Live infra_platform IP (ci/infra hosts). Used by provision DNS + external-dns + resolvers.
+
+# =============================================================================
+# Feature gates / pull modes
+# =============================================================================
+# Derived setup_* flags must stay consistent with pull modes (01_validate_vars).
+
+# Leaf DNS identity
+# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+dns_domain_suffix: example.com
+cluster_domain: "k8s.{{ dns_domain_suffix }}"
+k8s_cluster_domain: "{{ cluster_domain }}"
+dns_server_ip: 192.168.1.53
+
+nexus_host: "example.com"
+nexus_base_url: "https://{{ nexus_host }}/repository"
+harbor_host: "harbor.{{ dns_domain_suffix }}"
+harbor_mirror_base: "https://{{ harbor_host }}/v2"
+
+# PKI / TLS expectations for pull-through clients (CA lives on ci/infra).
+setup_stepca: true
+
+# --- Docker registry (atlas-k8s-core 01_validate_vars / 11_k8s_hosts) ---
+use_internal_docker_registry: registry
+setup_registry: "{{ use_internal_docker_registry == 'registry' }}"
+setup_registry_nginx: "{{ use_internal_docker_registry == 'registry' }}"
+registry_host: "registry.{{ dns_domain_suffix }}"
+registry_ingress_domain: "registry.{{ dns_domain_suffix }}"
+registry_tls_enabled: true
+# containerd_registry_mirrors — atlas-k8s-core.yml
+
+# --- APT/RPM (node-foundation 13_configure_repo + k8s-core validate) ---
+# Mirror deploy gate is setup_pkg_repo_nginx (served by ci/infra).
+# Warm = enable_repo_* on this overlay; client drop-ins = pkg_repos (+ pkg_repos_extra).
+use_internal_rpm_apt_repo: nginx
+setup_pkg_repo_nginx: true
+setup_apt_rpm_nginx: "{{ setup_pkg_repo_nginx }}"
+install_managed_pkg_repos: false
+install_additional_repos: false
+# cleanup_repositories — atlas-node-foundation.yml (must stay true for nginx/nexus)
+pkg_repo_nginx_ingress_domain: "repo.{{ dns_domain_suffix }}"
+pkg_repo_tls_enabled: true
+
+# --- Helm (atlas-k8s-addons 130_validate_vars / 210_helm_bootstrap) ---
+use_internal_helm_repo: nginx
+setup_helm_repo_nginx: true
+setup_helm_nginx: "{{ use_internal_helm_repo == 'nginx' and setup_helm_repo_nginx }}"
+helm_repo_nginx_ingress_domain: "helm.{{ dns_domain_suffix }}"
+helm_repo_nginx_host: "helm.{{ dns_domain_suffix }}"
+helm_repo_tls_enabled: true
+# helm_repo_upstreams — atlas-k8s-addons.yml
+
+# Snapshotter / static content gate (atlas-k8s-addons.yml references setup_custom_nginx)
+setup_custom_nginx: true
+custom_nginx_ingress_domain: "static.{{ dns_domain_suffix }}"
+custom_nginx_tls_enabled: true
+
+# =============================================================================
+# APT/RPM upstream catalog (client SoT for managed sources)
+# =============================================================================
+pkg_repo_upstreams:
+  # Debian (roles/13_configure_repo/files/debian.sources)
+  - { slug: debian-main, upstream_url: "https://deb.debian.org/debian", upstream_host: deb.debian.org }
+  - { slug: debian-security, upstream_url: "https://deb.debian.org/debian-security", upstream_host: deb.debian.org }
+  - { slug: debian-non-free, upstream_url: "https://deb.debian.org/debian", upstream_host: deb.debian.org }
+  # Ubuntu (roles/13_configure_repo/files/ubuntu.sources)
+  - { slug: ubuntu, upstream_url: "https://archive.ubuntu.com/ubuntu", upstream_host: archive.ubuntu.com }
+  # Docker APT (01-install-docker-engine, 11_k8s_hosts)
+  - { slug: debian-containerd, upstream_url: "https://download.docker.com/linux/debian", upstream_host: download.docker.com }
+  - { slug: ubuntu-containerd, upstream_url: "https://download.docker.com/linux/ubuntu", upstream_host: download.docker.com }
+  # PostgreSQL PGDG
+  - { slug: pgdg-apt, upstream_url: "https://apt.postgresql.org/pub/repos/apt", upstream_host: apt.postgresql.org }
+  - { slug: pgdg-yum, upstream_url: "https://download.postgresql.org/pub/repos/yum", upstream_host: download.postgresql.org }
+  # Kubernetes packages
+  - { slug: "k8s-ubuntu-{{ k8s_apt_repo_version }}", upstream_url: "https://pkgs.k8s.io/core:/stable:/v{{ k8s_apt_repo_version }}/deb/", upstream_host: pkgs.k8s.io }
+  - { slug: "k8s-{{ k8s_apt_repo_version }}", upstream_url: "https://pkgs.k8s.io/core:/stable:/v{{ k8s_apt_repo_version }}/rpm/", upstream_host: pkgs.k8s.io }
+  - { slug: yum_docker-ce-stable-9, upstream_url: "https://download.docker.com/linux/centos/9/x86_64/stable", upstream_host: download.docker.com }
+  - { slug: yum_docker-ce-stable-10, upstream_url: "https://download.docker.com/linux/centos/10/x86_64/stable", upstream_host: download.docker.com }
+  - { slug: gitlab-runner-ubuntu, upstream_url: "https://packages.gitlab.com/runner/gitlab-runner/ubuntu", upstream_host: packages.gitlab.com }
+  - { slug: gitlab-runner-debian, upstream_url: "https://packages.gitlab.com/runner/gitlab-runner/debian", upstream_host: packages.gitlab.com }
+  - { slug: gitlab-runner-el, upstream_url: "https://packages.gitlab.com/runner/gitlab-runner/el/9/x86_64", upstream_host: packages.gitlab.com }
+  # Oracle Linux 9 — upstream paths must match yum.oracle.com (repomd.xml → 200)
+  # kvm: .../kvm/utils/ (not kvm/); RDMA: .../RDMA/ (not RL9245090295/);
+  # developer EPEL: .../developer/EPEL/ (not developer_EPEL/);
+  # olm: .../oraclelinuxmanager210/client/ (not .../x86_64/ root)
+  - { slug: OL9_baseos, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL9/baseos/latest/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL9_appstream, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL9/appstream/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL9_addons, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL9/addons/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL9_developer, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL9/developer/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL9_developer_EPEL, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL9/developer/EPEL/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL9_codeready_builder, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL9/codeready/builder/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL9_kvm, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL9/kvm/utils/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL9_MODRHCK, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL9/MODRHCK/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL9_oraclelinuxmanager210, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL9/oraclelinuxmanager210/client/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL9_RDMA, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL9/RDMA/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL9_UEKR7, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL9/UEKR7/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL9_UEKR8, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL9/UEKR8/x86_64/", upstream_host: yum.oracle.com }
+  # Oracle Linux 10 — upstream paths must match yum.oracle.com (repomd.xml → 200)
+  # builder: .../distro/builder/ (not builder/); EPEL: .../0/developer/EPEL/ (not developer_EPEL/)
+  - { slug: OL10_baseos, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL10/baseos/latest/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL10_appstream, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL10/appstream/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL10_addons, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL10/addons/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL10_developer, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL10/developer/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL10_developer_EPEL, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL10/0/developer/EPEL/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL10_RDMA, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL10/RDMA/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL10_UEKR8, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL10/UEKR8/x86_64/", upstream_host: yum.oracle.com }
+  - { slug: OL10_builder, upstream_url: "https://yum.oracle.com/repo/OracleLinux/OL10/distro/builder/x86_64/", upstream_host: yum.oracle.com }
+
+# =============================================================================
+# Managed package repo enable flags (k8s nodes)
+# =============================================================================
+# --- Kubernetes / Docker CE ---
+enable_repo_k8s_1_36: true                 # kubelet, kubeadm, kubectl (pkgs.k8s.io)
+enable_repo_yum_docker_ce_stable_9: true    # docker-ce, containerd.io, compose/buildx plugins
+enable_repo_yum_docker_ce_stable_10: true
+enable_repo_k8s_ubuntu_1_36: true           # kubelet, kubeadm, kubectl (Debian и Ubuntu k8s-ноды)
+
+# --- Oracle Linux 9 ---
+enable_repo_OL9_baseos: true               # chrony, parted, rsync, cronie, logrotate, keepalived, dnf-plugins-core, …
+enable_repo_OL9_appstream: true            # nginx-mod-stream, ipset, ipvsadm, python3-dnf-plugin-versionlock, …
+enable_repo_OL9_addons: false
+enable_repo_OL9_developer: false
+enable_repo_OL9_developer_EPEL: true
+enable_repo_OL9_codeready_builder: true     # python3-wheel-wheel (EPEL virtualenv deps)
+enable_repo_OL9_kvm: false
+enable_repo_OL9_MODRHCK: false
+enable_repo_OL9_oraclelinuxmanager210: false
+enable_repo_OL9_RDMA: false
+enable_repo_OL9_UEKR7: true                 # kernel-uek-modules-core (базовые модули)
+enable_repo_OL9_UEKR8: true                  # kernel-uek-modules-extra-netfilter* (ip_vs, Rook/Ceph rbd; пакеты есть в UEKR8, не в UEKR7)
+
+# --- Oracle Linux 10 ---
+enable_repo_OL10_baseos: true
+enable_repo_OL10_appstream: true
+enable_repo_OL10_addons: false
+enable_repo_OL10_developer: false
+enable_repo_OL10_developer_EPEL: true
+enable_repo_OL10_RDMA: false
+enable_repo_OL10_UEKR8: true                 # kernel-uek-modules-extra-netfilter* (11/12_k8s_hosts)
+enable_repo_OL10_builder: false
+
+# --- Debian ---
+enable_repo_debian_main: true                # chrony, parted, rsync, lvm2, logrotate, keepalived, cron, …
+enable_repo_debian_security: true            # security updates для base packages
+enable_repo_debian_non_free: false          # в ролях non-free не используется
+enable_repo_debian_containerd: true        # docker-ce, containerd.io (infra Debian, 01/11)
+
+# --- Ubuntu ---
+enable_repo_ubuntu: true                     # archive: main/universe + security (+ backports в sources)
+enable_repo_ubuntu_containerd: true        # docker-ce, containerd.io (01/11)
+
+# --- PostgreSQL PGDG (warm on ci/infra; catalog parity) ---
+enable_repo_pgdg_apt: true
+enable_repo_pgdg_yum: true
+enable_repo_pgdg: true
+
+# --- GitLab Runner (warm; client = atlas-gitlab-runner) ---
+enable_repo_gitlab_runner_ubuntu: true
+enable_repo_gitlab_runner_debian: true
+enable_repo_gitlab_runner_el: true
+
+# Catalog parity (sync runs on ci/infra, not this client bridge)
+nginx_cache_sync_skip_if_fresh: false
+nginx_cache_sync_fresh_max_age_hours: 24

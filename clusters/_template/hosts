@@ -1,0 +1,9 @@
+# Inventory — edit for your cluster nodes.
+"all":
+  "children":
+    "k8s_lbs":
+      "hosts": {}
+    "k8s_masters":
+      "hosts": {}
+    "k8s_workers":
+      "hosts": {}

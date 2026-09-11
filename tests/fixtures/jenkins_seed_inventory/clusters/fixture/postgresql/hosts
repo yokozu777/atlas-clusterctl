@@ -1,0 +1,12 @@
+all:
+  children:
+    pgsql_cluster:
+      hosts:
+        10.20.0.1:
+          hostname: pg01.test.example
+        10.20.0.2:
+          hostname: pg02.test.example
+    pgsql_lbs:
+      hosts:
+        10.20.0.10:
+          hostname: lb01.test.example

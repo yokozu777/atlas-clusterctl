@@ -1,0 +1,87 @@
+# Per-cluster workspace runtime (controller state, apply workdir, build, logs, cache)
+# Layout mirrors clusters/: workspace/<env>/<name>/…
+/workspace/
+/workspace/**/repos/
+
+# Durable Terraform state checkout (legacy mode A under the controller)
+# Live inventory-backed labs (Phase 6 mode B): atlas-inventory/tfstate/<id>/
+# Controller /tfstate-repo/ remains gitignored for standalone / leftover clones.
+# Deprecated for mxhash/ci once leaves set provision_tf_state_local_dir =
+# atlas_inventory_root (do not treat tfstate-repo/ as SoT).
+/tfstate/
+/tfstate-repo/
+/tfstate.legacy-bak-*/
+/tfstate.local.bak-*/
+/tfstate-repo.legacy.bak*/
+/tfstate-repo.local.bak-*/
+
+# Legacy runtime paths (pre workspace migration — must not reappear in repo root)
+/.ansible/
+/.ansible-k8s-state/
+/.ansible_facts_cache/
+# Controller runtime cache (CI pip, legacy leftovers). SSH identity is **not**
+# written here — per-run staging lives under workspace/<id>/.atlas-ssh/ (see
+# docs/execution.md).
+/.cache/
+/logs/
+/tf_state/
+/tf_workspace/
+/build_workspace/
+/build_templates_state.json
+/variables.tf
+
+# Retired playbook repo stubs at controller root (use workspace/<id>/repos/ or siblings)
+/init_roles/
+/atlas-phase-0/
+/atlas-phase-1/
+/k8s-platform/
+
+# Python
+**/__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Local cluster selection
+.cluster-active
+
+# Local controller config (from .config/config.yaml.example) — machine/org paths
+/.config/config.yaml
+
+# Local org labs — keep on disk for ./cluster; do not push to public remotes
+/clusters/ci/
+/clusters/dev/
+
+# Cluster secrets
+# Deprecated monolithic secrets.yml stays ignored if present.
+# Canonical: atlas-<repo>.secrets.yml next to each product catalog — Vault-encrypt in place
+# (do NOT gitignore *.secrets.yml).
+**/.cluster.env
+clusters/**/group_vars/all/secrets.yml
+**/secrets.yml
+!**/*.secrets.yml
+!**/*.secrets.yaml
+
+# Generated cluster credential exports — never commit
+workspace/**/controller-state/reports/cluster-credentials.yaml
+workspace/**/controller-state/reports/cluster-credentials.md
+.ansible-k8s-state/reports/cluster-credentials.yaml
+.ansible-k8s-state/reports/cluster-credentials.md
+
+# Deprecated / removed artifacts
+ansible_local_execute.cfg
+hosts.zip
+
+# Ad-hoc ansible / debug logs at repo root (never commit)
+/*.log
+# Jenkins / console dump filenames like #118.txt (never commit)
+/#*.txt
+
+# Seed job runtime artifact (archived by Jenkins; not committed)
+/examples/internal/seed/cluster-ids.txt
+/examples/internal/seed/cluster-phases.json
+/examples/internal/seed/cluster-limits.json

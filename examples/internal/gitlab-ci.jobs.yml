@@ -1,0 +1,415 @@
+# Hand-maintained GitLab CI jobs for atlas-clusterctl.
+# Included from AUTO-GENERATED examples/internal/.gitlab-ci.yml (spec:inputs).
+# Docs: docs/gitlab-ci.md
+#
+# Shell-executor friendly (Option A): no `image:` — use host python3 + project
+# venv (PEP 668). Runner needs: python3, python3-venv, python3-pip, git.
+# Optional: openssh-client / sshpass for private inventory remotes.
+
+# Shared: create .venv and install requirements-dev (not system pip).
+.setup_venv: &setup_venv |
+  set -euo pipefail
+  if ! command -v python3 >/dev/null; then
+    echo "python3 missing on runner — apt install python3 python3-venv python3-pip" >&2
+    exit 127
+  fi
+  export PIP_CACHE_DIR="${PIP_CACHE_DIR:-${CI_PROJECT_DIR:-$PWD}/.cache/pip}"
+  mkdir -p "${PIP_CACHE_DIR}"
+  python3 -m venv .venv
+  # shellcheck disable=SC1091
+  # PATH so later script: steps use venv python/pip (GitLab concatenates one shell).
+  export PATH="${CI_PROJECT_DIR:-$PWD}/.venv/bin:${PATH}"
+  hash -r
+  pip install -U pip
+  pip install -r requirements-dev.txt
+  python -V
+  pip -V
+
+# ---------------------------------------------------------------------------
+# Deploy parity with Jenkinsfile.local: no automatic unittest suite here.
+# Full public gates stay on GitHub Actions (tests/run_ci.sh).
+# Optional offline ci_preflight --skip-tests runs inside ``deploy`` when
+# input run_ci_preflight is true (same as Jenkins RUN_CI_PREFLIGHT).
+#
+# Phase 6 Stage 5 (tfstate) / P1:
+#   Inventory checkout = mode-B provision_tf_state_local_dir (…/tfstate/<id>/).
+#   Jobs never create controller tfstate-repo/.
+#   Dirty outside tfstate/ → fail; dirty working tree under tfstate/ → CI discard
+#   (prepare_inventory_checkout.sh + default -e discard_local on run).
+#   Unpushed commits → fail (ff-only; never checkout -B FETCH_HEAD).
+#   seed: INV_FETCH_MODE=shallow; deploy: INV_FETCH_MODE=full.
+#   Opt-out discard: TFSTATE_GIT_DISCARD_LOCAL=false or EXTRA_VARS token
+#   provision_tf_state_git_discard_local=false.
+# ---------------------------------------------------------------------------
+# Seed (Jenkins atlas-clusterctl-seed analog)
+# Scans inventory → regenerates .gitlab-ci.yml dropdowns → optional git push.
+# Inventory URL/SSH: project CI/CD Variables (not Run-pipeline Inputs).
+#   INVENTORY_GIT_URL (recommended) — default below matches Jenkins seed
+#   INVENTORY_GIT_REF / INVENTORY_DIR — optional
+#   GIT_SSH_PRIV_KEY — optional PEM/file for private remotes
+# ---------------------------------------------------------------------------
+.seed_ssh: &seed_ssh |
+  set -euo pipefail
+  install -d -m 700 "${HOME}/.ssh"
+  # Always relax host-key checks for CI clones (runner known_hosts is often empty).
+  if [ -n "${GIT_SSH_PRIV_KEY:-}" ]; then
+    if [ -f "${GIT_SSH_PRIV_KEY}" ]; then
+      cp "${GIT_SSH_PRIV_KEY}" "${HOME}/.ssh/id_deploy"
+    else
+      printf '%s\n' "${GIT_SSH_PRIV_KEY}" > "${HOME}/.ssh/id_deploy"
+    fi
+    chmod 600 "${HOME}/.ssh/id_deploy"
+    export GIT_SSH_COMMAND="ssh -i ${HOME}/.ssh/id_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    echo "seed: GIT_SSH_COMMAND armed (GIT_SSH_PRIV_KEY)"
+  else
+    export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    echo "seed: GIT_SSH_COMMAND armed (runner default identity; set GIT_SSH_PRIV_KEY if clone fails auth)"
+  fi
+
+seed:
+  stage: seed
+  # Serialize seed+deploy on persistent INVENTORY_DIR (mode B TF SoT).
+  resource_group: atlas-clusterctl-inventory
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "pipeline"
+      when: manual
+      allow_failure: false
+    - when: never
+  before_script:
+    - *seed_ssh
+    - *setup_venv
+    - chmod +x ./cluster
+    - command -v git >/dev/null || { echo "git missing on runner" >&2; exit 127; }
+  script:
+    - |
+      set -euo pipefail
+      # Project CI/CD Variables (Settings → CI/CD → Variables). Jenkins-seed default
+      # if unset. Inputs do not supply inventory for seed (avoids empty wipe).
+      export INV_URL="${INVENTORY_GIT_URL:-ssh://git@gitea.mxhash.com/root/atlas-inventory.git}"
+      export INV_REF="${INVENTORY_GIT_REF:-main}"
+      export INV_DIR="${INVENTORY_DIR:-atlas-inventory}"
+      export INV_FETCH_MODE=shallow
+      # Seed scan: remote inventory is SoT (same default as Jenkins INVENTORY_RESET_HARD).
+      export INV_RESET_HARD="${INV_RESET_HARD:-true}"
+      echo "seed: inventory ${INV_URL} @ ${INV_REF} → ${INV_DIR} (INV_FETCH_MODE=${INV_FETCH_MODE} INV_RESET_HARD=${INV_RESET_HARD})"
+      bash examples/internal/ci/prepare_inventory_checkout.sh
+    - |
+      set -euo pipefail
+      INV_DIR="${INVENTORY_DIR:-atlas-inventory}"
+      PREFER="${PREFER_CLUSTER_ID:-}"
+      prefer_args=()
+      if [ -n "${PREFER}" ]; then
+        prefer_args+=(--prefer "${PREFER}")
+      fi
+      mkdir -p examples/internal/seed
+      python3 -m clusterctl.tools.list_deployable_clusters \
+        --clusters-root "${INV_DIR}/clusters" \
+        "${prefer_args[@]}" \
+        | tee examples/internal/seed/cluster-ids.txt
+      test -s examples/internal/seed/cluster-ids.txt
+      echo "seed: $(wc -l < examples/internal/seed/cluster-ids.txt) deployable id(s)"
+    - |
+      set -euo pipefail
+      INV_DIR="${INVENTORY_DIR:-atlas-inventory}"
+      python3 -m clusterctl.tools.list_cluster_phases \
+        --clusters-root "${INV_DIR}/clusters" \
+        --all \
+        --allow-empty \
+        > examples/internal/seed/cluster-phases.json
+      python3 -m clusterctl.tools.list_cluster_limits \
+        --clusters-root "${INV_DIR}/clusters" \
+        --all \
+        --allow-empty \
+        --ui \
+        > examples/internal/seed/cluster-limits.json
+      python3 examples/internal/seed/generate_gitlab_ci.py \
+        --prefer "${PREFER_CLUSTER_ID:-}"
+    - |
+      set -euo pipefail
+      # Commit regenerated dropdowns (GitLab has no Job DSL — options live in git).
+      if git diff --quiet -- examples/internal/.gitlab-ci.yml; then
+        echo "seed: .gitlab-ci.yml unchanged — nothing to push"
+        exit 0
+      fi
+      git status --short -- examples/internal/.gitlab-ci.yml
+      git config user.email "${GITLAB_USER_EMAIL:-seed@atlas-clusterctl.local}"
+      git config user.name "${GITLAB_USER_NAME:-atlas-clusterctl-seed}"
+      # Runner checkout is often detached — commit on the pipeline branch.
+      git checkout -B "${CI_COMMIT_REF_NAME}"
+      git add examples/internal/.gitlab-ci.yml
+      git commit -m "chore(seed): refresh GitLab CI cluster_id/phases/limit options [skip ci]"
+      # Prefer dedicated push token; fall back to job token.
+      # PAT / project token (glpat-…): HTTPS user must be oauth2 (NOT gitlab-ci-token).
+      # CI_JOB_TOKEN: user gitlab-ci-token.
+      HOST="${CI_SERVER_HOST}"
+      PATH_ENC="${CI_PROJECT_PATH}"
+      if [ -n "${GITLAB_PUSH_TOKEN:-}" ]; then
+        PUSH_USER="oauth2"
+        PUSH_TOKEN="${GITLAB_PUSH_TOKEN}"
+        echo "seed: push auth=oauth2 (GITLAB_PUSH_TOKEN)"
+      elif [ -n "${CI_JOB_TOKEN:-}" ]; then
+        PUSH_USER="gitlab-ci-token"
+        PUSH_TOKEN="${CI_JOB_TOKEN}"
+        echo "seed: push auth=gitlab-ci-token (CI_JOB_TOKEN)"
+      else
+        echo "seed: no GITLAB_PUSH_TOKEN / CI_JOB_TOKEN — commit left local; download artifact or push manually" >&2
+        exit 1
+      fi
+      if git push \
+        "https://${PUSH_USER}:${PUSH_TOKEN}@${HOST}/${PATH_ENC}.git" \
+        "HEAD:refs/heads/${CI_COMMIT_REF_NAME}"
+      then
+        echo "seed: pushed updated examples/internal/.gitlab-ci.yml → ${CI_COMMIT_REF_NAME}"
+      else
+        echo "seed: ERROR: push failed — check GITLAB_PUSH_TOKEN (write_repository)," >&2
+        echo "seed:   token role vs Protected branches (Allowed to push on ${CI_COMMIT_REF_NAME})," >&2
+        echo "seed:   or Job token permissions. Artifact still has examples/internal/.gitlab-ci.yml." >&2
+        exit 1
+      fi
+  artifacts:
+    when: always
+    expire_in: 14 days
+    paths:
+      - examples/internal/.gitlab-ci.yml
+      - examples/internal/seed/cluster-ids.txt
+      - examples/internal/seed/cluster-phases.json
+      - examples/internal/seed/cluster-limits.json
+
+# ---------------------------------------------------------------------------
+# Manual deploy (Jenkinsfile.local parity)
+# ---------------------------------------------------------------------------
+.deploy_ssh: &deploy_ssh |
+  set -euo pipefail
+  install -d -m 700 "${HOME}/.ssh"
+  if [ -n "${GIT_SSH_PRIV_KEY:-}" ]; then
+    if [ -f "${GIT_SSH_PRIV_KEY}" ]; then
+      cp "${GIT_SSH_PRIV_KEY}" "${HOME}/.ssh/id_deploy"
+    else
+      printf '%s\n' "${GIT_SSH_PRIV_KEY}" > "${HOME}/.ssh/id_deploy"
+    fi
+    chmod 600 "${HOME}/.ssh/id_deploy"
+    export GIT_SSH_COMMAND="ssh -i ${HOME}/.ssh/id_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    # Jenkins parity: clusterctl validate/execution expect SSH_KEY (default ~/.ssh/id_rsa).
+    export SSH_KEY="${SSH_KEY:-${HOME}/.ssh/id_deploy}"
+    echo "deploy: GIT_SSH_COMMAND + SSH_KEY armed (GIT_SSH_PRIV_KEY)"
+  else
+    export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    if [ -z "${SSH_KEY:-}" ] && [ -f "${HOME}/.ssh/id_rsa" ]; then
+      export SSH_KEY="${HOME}/.ssh/id_rsa"
+    fi
+    if [ -n "${SSH_KEY:-}" ]; then
+      echo "deploy: GIT_SSH_COMMAND armed; SSH_KEY=${SSH_KEY}"
+    else
+      echo "deploy: GIT_SSH_COMMAND armed; SSH_KEY unset — set GIT_SSH_PRIV_KEY or SSH_KEY for host Ansible" >&2
+    fi
+  fi
+
+.normalize_list_inputs: &normalize_list_inputs |
+  set -euo pipefail
+  # Normalize string/CSV (or legacy JSON list) inputs; strip __none__.
+  eval "$(python3 - <<'PY'
+  import json
+  import os
+  import shlex
+
+  NONE = "__none__"
+
+  def norm(key: str) -> None:
+      raw = (os.environ.get(key) or "").strip()
+      if not raw or raw == "[]":
+          print(f"export {key}=")
+          return
+      items: list[str]
+      if raw.startswith("["):
+          try:
+              items = [str(x).strip() for x in json.loads(raw)]
+          except json.JSONDecodeError:
+              items = [p.strip() for p in raw.split(",")]
+      else:
+          items = [p.strip() for p in raw.split(",")]
+      items = [x for x in items if x and x != NONE]
+      print(f"export {key}={shlex.quote(','.join(items))}")
+
+  for k in ("PHASES", "LIMIT"):
+      norm(k)
+  PY
+  )"
+
+deploy:
+  stage: deploy
+  # Independent of seed stage — otherwise GitLab keeps deploy "Created" until
+  # manual seed succeeds (or is skipped). Operator plays only deploy for day-to-day.
+  needs: []
+  # One writer on persistent INVENTORY_DIR + tfstate/ (shared with seed).
+  resource_group: atlas-clusterctl-inventory
+  # tags:
+  #   - atlas-deploy
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "pipeline"
+      when: manual
+      allow_failure: false
+    - when: never
+  before_script:
+    - *deploy_ssh
+    - *normalize_list_inputs
+    - chmod +x ./cluster
+    - mkdir -p /tmp/clusterctl
+    - test -w /tmp/clusterctl
+    - |
+      set -euo pipefail
+      if [ -z "${CLUSTER_ID:-}" ]; then
+        echo "CLUSTER_ID is required (Run pipeline → Inputs → cluster_id)" >&2
+        exit 1
+      fi
+      echo "deploy: CLUSTER_ID=${CLUSTER_ID} PHASES=${PHASES:-} LIMIT=${LIMIT:-}"
+  script:
+    - |
+      set -euo pipefail
+      # Input override if non-empty, else CI/CD Variable, else same Jenkins/seed default.
+      # (Empty skip left leaf clusters missing → "cluster config not found".)
+      DEFAULT_INV_URL="ssh://git@gitea.mxhash.com/root/atlas-inventory.git"
+      INV_URL="${INPUT_INVENTORY_GIT_URL:-${INVENTORY_GIT_URL:-${DEFAULT_INV_URL}}}"
+      INV_REF="${INPUT_INVENTORY_GIT_REF:-${INVENTORY_GIT_REF:-main}}"
+      INV_DIR="${INPUT_INVENTORY_DIR:-${INVENTORY_DIR:-atlas-inventory}}"
+      export INVENTORY_GIT_URL="${INV_URL}"
+      export INVENTORY_GIT_REF="${INV_REF}"
+      export INVENTORY_DIR="${INV_DIR}"
+      export INV_URL INV_REF INV_DIR
+      export INV_FETCH_MODE=full
+      echo "deploy: inventory ${INV_URL} @ ${INV_REF} → ${INV_DIR} (INV_FETCH_MODE=${INV_FETCH_MODE})"
+      bash examples/internal/ci/prepare_inventory_checkout.sh
+      mkdir -p .config
+      if [ ! -f .config/config.yaml ]; then
+        cp .config/config.yaml.example .config/config.yaml
+      fi
+      python3 - <<'PY'
+      import os
+      from pathlib import Path
+      import yaml
+
+      root = Path(".").resolve()
+      inv = (root / os.environ["INVENTORY_DIR"]).resolve() / "clusters"
+      cfg_path = root / ".config" / "config.yaml"
+      data = {}
+      if cfg_path.is_file():
+          raw = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+          if isinstance(raw, dict):
+              data = raw
+      clusters = data.setdefault("clusters", {})
+      if not isinstance(clusters, dict):
+          clusters = {}
+          data["clusters"] = clusters
+      clusters["path"] = str(inv)
+      cfg_path.write_text(
+          yaml.safe_dump(data, sort_keys=False, allow_unicode=True),
+          encoding="utf-8",
+      )
+      print(f"clusters.path -> {inv}")
+      print(f"atlas_inventory_root (mode B local_dir) -> {inv.parent}")
+      PY
+      ./cluster list
+    - |
+      set -euo pipefail
+      # Jenkins parity: optional offline preflight (no unittest).
+      # GitLab boolean inputs arrive as "true"/"false" strings.
+      case "${RUN_CI_PREFLIGHT:-true}" in
+        true|TRUE|True|1|yes|YES) ;;
+        *)
+          echo "deploy: RUN_CI_PREFLIGHT=${RUN_CI_PREFLIGHT:-} — skip ci_preflight"
+          exit 0
+          ;;
+      esac
+      python3 -m clusterctl.tools.ci_preflight --skip-tests
+    - |
+      set -euo pipefail
+      ./cluster use "${CLUSTER_ID}"
+      ./cluster --cluster "${CLUSTER_ID}" repos sync
+      ./cluster --cluster "${CLUSTER_ID}" repos status
+    - |
+      set -euo pipefail
+      STRICT_ARGS=""
+      case "${VALIDATE_STRICT:-}" in
+        --strict) STRICT_ARGS="--strict" ;;
+      esac
+      # shellcheck disable=SC2086
+      ./cluster --cluster "${CLUSTER_ID}" validate ${STRICT_ARGS}
+    - |
+      set -euo pipefail
+      if [ "${RUN_SMOKE:-true}" = "true" ]; then
+        ./cluster --cluster "${CLUSTER_ID}" smoke
+      fi
+    - |
+      set -euo pipefail
+      if [ -n "${PHASES:-}" ]; then
+        ./cluster --cluster "${CLUSTER_ID}" plan --phases "${PHASES}"
+        ./cluster --cluster "${CLUSTER_ID}" plan --json --phases "${PHASES}" > plan.json
+      else
+        ./cluster --cluster "${CLUSTER_ID}" plan
+        ./cluster --cluster "${CLUSTER_ID}" plan --json > plan.json
+      fi
+      test -s plan.json
+    - |
+      set -euo pipefail
+      if [ "${SKIP_DEPLOY:-false}" = "true" ]; then
+        echo "SKIP_DEPLOY=true — plan only"
+        exit 0
+      fi
+      python3 - <<'PY'
+      import json
+      import os
+      import shlex
+      import subprocess
+      import sys
+
+      cluster = os.environ["CLUSTER_ID"]
+      tags = (os.environ.get("TAGS") or "").strip()
+      limit = (os.environ.get("LIMIT") or "").strip()
+      extra_vars = (os.environ.get("EXTRA_VARS") or "").strip()
+
+      plan = json.loads(open("plan.json", encoding="utf-8").read())
+      details = plan.get("stage_details") or []
+      if not details:
+          print("Plan has no stages to run")
+          sys.exit(0)
+
+      # Phase 6 Stage 5: CI default discard under tfstate/ only (roles never touch clusters/).
+      # Opt-out: TFSTATE_GIT_DISCARD_LOCAL=false or EXTRA_VARS already sets the var.
+      discard_token = "provision_tf_state_git_discard_local="
+      discard_in_extra = any(
+          tok.startswith(discard_token) for tok in shlex.split(extra_vars) if tok
+      )
+      discard_env = (os.environ.get("TFSTATE_GIT_DISCARD_LOCAL") or "true").strip().lower()
+      inject_discard = (not discard_in_extra) and discard_env in (
+          "1",
+          "true",
+          "yes",
+          "on",
+      )
+
+      total = len(details)
+      for idx, st in enumerate(details, start=1):
+          phase_ref = st["phase_ref"]
+          print(f"[{idx}/{total}] {phase_ref}")
+          cmd = ["./cluster", "--cluster", cluster, "run", "--phases", phase_ref]
+          if tags and tags.lower() != "all":
+              cmd.extend(["--tags", tags])
+          if limit:
+              cmd.extend(["--limit", limit])
+          if inject_discard:
+              cmd.extend(["-e", "provision_tf_state_git_discard_local=true"])
+          if extra_vars:
+              for tok in shlex.split(extra_vars):
+                  if tok == "-e":
+                      raise SystemExit("EXTRA_VARS: do not include leading -e; use key=value tokens")
+                  if "=" not in tok:
+                      raise SystemExit(f"EXTRA_VARS: expected key=value token, got: {tok}")
+                  cmd.extend(["-e", tok])
+          print("+", " ".join(shlex.quote(c) for c in cmd), flush=True)
+          subprocess.check_call(cmd)
+      PY
+  artifacts:
+    when: always
+    expire_in: 14 days
+    paths:
+      - plan.json
+      - workspace/**/logs/**

@@ -1,0 +1,54 @@
+# Redis Cluster HA lab application vars (atlas-redis roles 200–204)
+# Orchestration notes: sibling product has no org defaults — lab mirrors/prefix live here.
+#
+# Inventory group names for sibling playbook targeting (keep in sync with hosts + cluster.yaml limits).
+
+# Leaf DNS identity
+# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+dns_domain_suffix: example.com
+cluster_domain: "redis.{{ dns_domain_suffix }}"
+
+redis_master_hosts: redis_cluster_masters
+redis_replica_hosts: redis_cluster_replicas
+redis_proxy_hosts: redis_proxies
+redis_lb_hosts: redis_lbs
+#
+# OS package drop-ins: env default pkg_repos (+ optional leaf pkg_repos_extra on atlas-node-foundation.yml)
+
+redis_version: "8.8.0"
+redis_port: 6379
+redis_cluster_bus_port: 16379
+redis_cluster_replicas_per_master: 1
+redis_cluster_create_mode: auto
+
+# Lab: no auth. Set for production.
+
+# Redis source tarball for controller build (role 200_redis_node).
+# Optional HTTP(S) mirror — overrides GitHub when set (lab SoT; not a sibling default):
+# redis_download_mirror_url: "https://mirror.example.com/redis/redis-{{ redis_version }}.tar.gz"
+redis_download_mirror_url: ''
+redis_download_use_github_proxy: false
+redis_download_github_proxy: ''
+
+# Must match lab_plan.yml / README VIP
+vip_address: "192.168.1.250"
+# Mixed OS: Ubuntu/Debian Proxmox guests use ens18; oracle-base uses eth0.
+# Leave empty so 203_redis_lb picks ansible_default_ipv4.interface per host.
+vip_interface: ""
+# vip_auth_pass / redis_requirepass → atlas-redis.secrets.yml
+virtual_router_id: 51
+
+haproxy_rw_port: 6379
+haproxy_ro_port: 6380
+haproxy_log_facility: local0
+haproxy_maxconn: 5000
+
+redis_proxy_listen_port: 6379
+
+redis_proxy_type: predixy
+# Predixy Free Edition (GitHub: joyieldInc/predixy releases).
+predixy_version: "7.0.1"
+# Lab VMs (Ivy Bridge) lack BMI2/ADX required by the prebuilt FE binary.
+predixy_install_method: source
+# Optional full URL override (HTTP(S) mirror). Leave empty for default GitHub release.
+predixy_download_url: ""

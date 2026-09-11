@@ -1,0 +1,47 @@
+provision_gateway: 192.168.1.1
+provision_pve_host: 192.168.1.20
+provision_pve_user: root
+provision_pve_inventory_name: pve
+provision_pve_inventory_group: proxmox
+provision_proxmox_api_url: https://{{ provision_pve_host }}:8006/api2/json
+provision_proxmox_target_node: pve
+provision_proxmox_parallel: 40
+provision_tf_parallelism: 3
+dns_server_ip: 192.168.1.53
+provision_dns_server: '{{ dns_server_ip | default(provision_gateway) }}'
+provision_dns_zone: '{{ dns_domain_suffix }}.'
+provision_dns_key_name: '{{ dns_domain_suffix }}.'
+provision_dns_key_algorithm: hmac-sha256
+provision_dns_transport: tcp4
+provision_dns_tf_manage_a_records: true
+provision_vm_full_clone: false
+provision_vm_cloudinit_storage: local-zfs
+provision_vm_disk_cache: unsafe
+provision_vm_disk_format: raw
+provision_vm_network_bridge: vmbr0
+provision_vm_ciuser: root
+provision_ssh_public_key_file: '{{ cluster_pub_keys_dir }}/localuser.pub'
+provision_tf_state_local_dir: '{{ atlas_inventory_root }}'
+provision_tf_state_git_discard_local: true
+gitea_host: example.com
+provision_tf_state_repo: git@{{ gitea_host }}:org/atlas-inventory.git
+provision_tf_state_branch: main
+provision_tf_state_git_push: true
+git_user_name: atlas-runner
+git_user_email: atlas-runner@example.com
+dns_domain_suffix: example.com
+cluster_domain: pve-templates.{{ dns_domain_suffix }}
+provision_pve_upload_dir: /tmp/
+provision_pve_templates:
+  ubuntu-base:
+    id: 400100
+    image_url: https://example.com/images/ubuntu-26.04-minimal-cloudimg-amd64.img
+  oracle-base:
+    id: 400101
+    image_url: https://example.com/images/OL9U8_x86_64-kvm-b293.qcow2
+  debian-base:
+    id: 400102
+    image_url: https://example.com/images/debian-13-generic-amd64.qcow2
+build_cloud_image_customize_enabled: false
+build_cloud_image_packages:
+- qemu-guest-agent

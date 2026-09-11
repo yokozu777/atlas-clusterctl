@@ -1,0 +1,10 @@
+all:
+  children:
+    redis_cluster_masters:
+      hosts:
+        10.30.0.1:
+          hostname: master01.redis.test
+    redis_proxies:
+      hosts:
+        10.30.0.5:
+          hostname: proxy01.redis.test

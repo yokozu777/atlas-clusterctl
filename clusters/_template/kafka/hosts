@@ -1,0 +1,96 @@
+all:
+  children:
+    kafka:
+      children:
+        kafka_controllers:
+          hosts:
+            # Mixed-OS SoT: ../MIXED_OS_KAFKA_REDIS.md (Phase 2 applied)
+            192.168.1.240:
+              hostname: kafka-controller01.example.com
+              kafka_node_id: 1
+              provision:
+                vmid: "5730"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.241:
+              hostname: kafka-controller02.example.com
+              kafka_node_id: 2
+              provision:
+                vmid: "5731"
+                sockets: 1
+                cores: 2  
+                memory: 4096
+                numa: false
+                clone: oracle-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.242:
+              hostname: kafka-controller03.example.com
+              kafka_node_id: 3
+              provision:
+                vmid: "5732"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: debian-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+        kafka_brokers:
+          hosts:
+            192.168.1.243:
+              hostname: kafka-broker01.example.com
+              kafka_node_id: 101
+              provision:
+                vmid: "5733"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.244:
+              hostname: kafka-broker02.example.com
+              kafka_node_id: 102
+              provision:
+                vmid: "5734"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: oracle-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.245:
+              hostname: kafka-broker03.example.com
+              kafka_node_id: 103
+              provision:
+                vmid: "5735"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: debian-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_user: localuser

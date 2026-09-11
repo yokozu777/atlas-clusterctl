@@ -1,0 +1,352 @@
+// atlas-clusterctl — Docker-agent Pipeline sample (schema v2).
+//
+// Script path: examples/internal/Jenkinsfile
+// Pair with leaf cluster.yaml execution.mode: docker (nested krang via docker.sock).
+// Avoid execution.mode: local inside this agent — Ansible RPC often fails in nested containers.
+//
+// Agent image must already provide python3, PyYAML, git, sshpass, Docker CLI.
+// Sibling sample for bare agents + local Ansible: examples/internal/Jenkinsfile.local
+//
+// UI parameters SoT = seed job (docs/jenkins-seed.md). Do NOT declare parameters {}
+// here — Declarative would reset seed-managed choice CLUSTER_ID (and siblings).
+// Bootstrap: build atlas-clusterctl-seed once before Build with Parameters.
+
+/** Job param → env-safe string (never literal "null"; Active Choices multi → CSV). */
+def envParam(Object value, String fallback = '') {
+    if (value == null) {
+        return fallback
+    }
+    // Active Choices checkbox / multi-select may be a Collection (ADR 010 / 011).
+    if (value instanceof Collection) {
+        def parts = value.collect { it?.toString()?.trim() }
+            .findAll { it && !it.equalsIgnoreCase('null') }
+        return parts ? parts.join(',') : fallback
+    }
+    // Object[] only — do NOT call Class.isArray() (Script Approval rejects
+    // java.lang.invoke.TypeDescriptor$OfField.isArray on modern JDKs).
+    if (value instanceof Object[]) {
+        def parts = Arrays.asList(value as Object[]).collect { it?.toString()?.trim() }
+            .findAll { it && !it.equalsIgnoreCase('null') }
+        return parts ? parts.join(',') : fallback
+    }
+    def s = value.toString().trim()
+    if (!s || s.equalsIgnoreCase('null')) {
+        return fallback
+    }
+    // Guard against accidental Collection.toString() like "[a, b]" if type slips.
+    if (s.startsWith('[') && s.endsWith(']') && s.contains(', ')) {
+        def inner = s.substring(1, s.length() - 1).trim()
+        if (!inner) {
+            return fallback
+        }
+        return inner.split(', ').collect { it.trim() }.findAll { it }.join(',')
+    }
+    return s
+}
+
+/** Fail fast unless seed-managed params exist (UI SoT = seed). */
+def requireSeedManagedParams() {
+    if (!envParam(params.CLUSTER_ID)) {
+        error(
+            'CLUSTER_ID missing — run atlas-clusterctl-seed first ' +
+            '(docs/jenkins-seed.md). Deploy Jenkinsfile does not declare parameters.'
+        )
+    }
+    if (params.RUN_SMOKE == null || params.SKIP_DEPLOY == null || params.RUN_CI_PREFLIGHT == null) {
+        error(
+            'Seed-managed boolean params missing (RUN_SMOKE / SKIP_DEPLOY / RUN_CI_PREFLIGHT) — ' +
+            'run atlas-clusterctl-seed first (docs/jenkins-seed.md).'
+        )
+    }
+}
+
+def withOptionalGitSsh(Closure body) {
+    def credId = envParam(params.GIT_SSH_CREDENTIALS_ID)
+    if (credId) {
+        withCredentials([sshUserPrivateKey(credentialsId: credId, keyFileVariable: 'SSH_KEY')]) {
+            withEnv(["GIT_SSH_COMMAND=ssh -i ${SSH_KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=no"]) {
+                body()
+            }
+        }
+    } else {
+        body()
+    }
+}
+
+// ADR 009: run one plan phase with optional TAGS / LIMIT / EXTRA_VARS (no eval).
+// TAGS or LIMIT set → selective overrides (single-phase PHASES only; else clusterctl ERROR).
+// Phase 6 Stage 5: default -e provision_tf_state_git_discard_local=true (CI);
+// opt-out TFSTATE_GIT_DISCARD_LOCAL=false or EXTRA_VARS token for that var.
+def runClusterPhase(String phaseRef) {
+    withEnv([
+        "PHASE_REF=${phaseRef}",
+        "EXTRA_VARS=${envParam(params.EXTRA_VARS)}",
+        "TAGS=${envParam(params.TAGS)}",
+        "LIMIT=${envParam(params.LIMIT)}",
+    ]) {
+        sh '''
+            bash -euo pipefail <<'EOF'
+            extra=()
+            if [ -n "${TAGS:-}" ] && [ "${TAGS}" != "all" ]; then
+              extra+=(--tags "${TAGS}")
+            fi
+            if [ -n "${LIMIT:-}" ]; then
+              extra+=(--limit "${LIMIT}")
+            fi
+            discard_in_extra=0
+            if [ -n "${EXTRA_VARS:-}" ]; then
+              # Space-separated key=value tokens only (values must not contain whitespace).
+              # Intentional unquoted split — do not eval EXTRA_VARS as a command string.
+              # Example token: provision_mode=destroy
+              for tok in ${EXTRA_VARS}; do
+                case "${tok}" in
+                  -e)
+                    echo "EXTRA_VARS: do not include leading -e; use key=value tokens" >&2
+                    exit 1
+                    ;;
+                  provision_tf_state_git_discard_local=*)
+                    discard_in_extra=1
+                    extra+=(-e "${tok}")
+                    ;;
+                  *=*)
+                    extra+=(-e "${tok}")
+                    ;;
+                  *)
+                    echo "EXTRA_VARS: expected key=value token, got: ${tok}" >&2
+                    exit 1
+                    ;;
+                esac
+              done
+            fi
+            if [ "${discard_in_extra}" -eq 0 ]; then
+              case "${TFSTATE_GIT_DISCARD_LOCAL:-true}" in
+                true|TRUE|True|1|yes|YES|on|ON)
+                  extra+=(-e "provision_tf_state_git_discard_local=true")
+                  ;;
+              esac
+            fi
+            ./cluster --cluster "${CLUSTER_ID}" run --phases "${PHASE_REF}" "${extra[@]}"
+EOF
+        '''
+    }
+}
+
+pipeline {
+    agent {
+        docker {
+            image 'harbor.mxhash.com/library/krang'
+            label "${envParam(params.AGENT, 'built-in')}"
+            // Nested ./cluster docker execution needs host Docker; shm for Ansible in-container tools.
+            args '-v /var/run/docker.sock:/var/run/docker.sock --shm-size=1g'
+            alwaysPull true
+        }
+    }
+
+    // parameters {} intentionally omitted — see header (seed owns UI SoT).
+
+    environment {
+        ANSIBLE_FORCE_COLOR = 'true'
+        CLUSTER_ID = "${envParam(params.CLUSTER_ID)}"
+        EXECUTION_DOCKER_TAG = "${envParam(params.EXECUTION_DOCKER_TAG)}"
+        PHASES = "${envParam(params.PHASES)}"
+        TAGS = "${envParam(params.TAGS)}"
+        LIMIT = "${envParam(params.LIMIT)}"
+        EXTRA_VARS = "${envParam(params.EXTRA_VARS)}"
+        INVENTORY_GIT_URL = "${envParam(params.INVENTORY_GIT_URL)}"
+        INVENTORY_GIT_REF = "${envParam(params.INVENTORY_GIT_REF, 'main')}"
+        INVENTORY_DIR = "${envParam(params.INVENTORY_DIR, 'atlas-inventory')}"
+        VALIDATE_STRICT = "${envParam(params.VALIDATE_STRICT, 'off')}"
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '25', artifactNumToKeepStr: '25'))
+        timestamps()
+        // Requires AnsiColor plugin — renders ANSI from ansible (ANSIBLE_FORCE_COLOR).
+        ansiColor('xterm')
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'workspace/**/logs/**', allowEmptyArchive: true
+            cleanWs()
+        }
+    }
+
+    stages {
+        stage('Prepare') {
+            steps {
+                script {
+                    requireSeedManagedParams()
+                }
+                sh '''
+                    set -euo pipefail
+                    chmod +x ./cluster
+                    # Host-side root for docker-executor Ansible controller temp
+                    # (/tmp/clusterctl/<workspace_id> is also mkdir'd inside krang on docker run).
+                    mkdir -p /tmp/clusterctl
+                    test -d /tmp/clusterctl
+                    test -w /tmp/clusterctl
+                    echo "Prepare: /tmp/clusterctl ok"
+                    echo "Prepare: CLUSTER_ID=${CLUSTER_ID}"
+                '''
+            }
+        }
+
+        stage('Inventory checkout') {
+            when {
+                expression { envParam(params.INVENTORY_GIT_URL) }
+            }
+            steps {
+                withOptionalGitSsh {
+                        sh '''
+                        set -euo pipefail
+                        export INV_DIR="${INVENTORY_DIR:-atlas-inventory}"
+                        export INV_URL="${INVENTORY_GIT_URL}"
+                        export INV_REF="${INVENTORY_GIT_REF:-main}"
+                        # Deploy = full history (mode B TF SoT); seed uses shallow.
+                        export INV_FETCH_MODE=full
+                        bash examples/internal/ci/prepare_inventory_checkout.sh
+                        mkdir -p .config
+                        if [ ! -f .config/config.yaml ]; then
+                          cp .config/config.yaml.example .config/config.yaml
+                        fi
+                        # Point clusters.path at the checked-out inventory (absolute for the agent workspace).
+                        # Parent of clusters.path = atlas_inventory_root = mode-B local_dir (Phase 6 Stage 5).
+                        python3 - <<'PY'
+import os
+from pathlib import Path
+import yaml
+
+root = Path(".").resolve()
+inv = (root / os.environ["INVENTORY_DIR"]).resolve() / "clusters"
+cfg_path = root / ".config" / "config.yaml"
+data = {}
+if cfg_path.is_file():
+    raw = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+    if isinstance(raw, dict):
+        data = raw
+clusters = data.setdefault("clusters", {})
+if not isinstance(clusters, dict):
+    clusters = {}
+    data["clusters"] = clusters
+clusters["path"] = str(inv)
+cfg_path.write_text(
+    yaml.safe_dump(data, sort_keys=False, allow_unicode=True),
+    encoding="utf-8",
+)
+print(f"clusters.path -> {inv}")
+print(f"atlas_inventory_root (mode B local_dir) -> {inv.parent}")
+PY
+                        ./cluster list
+                    '''
+                }
+            }
+        }
+
+        stage('CI preflight') {
+            when {
+                expression { params.RUN_CI_PREFLIGHT == true }
+            }
+            steps {
+                sh '''
+                    set -euo pipefail
+                    python3 -m clusterctl.tools.ci_preflight --skip-tests
+                '''
+            }
+        }
+
+        stage('Repos sync') {
+            steps {
+                withOptionalGitSsh {
+                    sh '''
+                        set -euo pipefail
+                        ./cluster use "${CLUSTER_ID}"
+                        ./cluster --cluster "${CLUSTER_ID}" repos sync
+                        ./cluster --cluster "${CLUSTER_ID}" repos status
+                    '''
+                }
+            }
+        }
+
+        stage('Validate') {
+            steps {
+                withOptionalGitSsh {
+                    sh '''
+                        set -euo pipefail
+                        STRICT_ARGS=""
+                        case "${VALIDATE_STRICT:-}" in
+                          --strict) STRICT_ARGS="--strict" ;;
+                        esac
+                        # shellcheck disable=SC2086
+                        ./cluster --cluster "${CLUSTER_ID}" validate ${STRICT_ARGS}
+                    '''
+                }
+            }
+        }
+
+        stage('Smoke') {
+            when {
+                expression { params.RUN_SMOKE == true }
+            }
+            steps {
+                withOptionalGitSsh {
+                    sh '''
+                        set -euo pipefail
+                        ./cluster --cluster "${CLUSTER_ID}" smoke
+                    '''
+                }
+            }
+        }
+
+        stage('Plan') {
+            steps {
+                withOptionalGitSsh {
+                    sh '''
+                        set -euo pipefail
+                        # Empty PHASES → plan without --phases (plan SoT; docs/jenkins-seed.md).
+                        # May differ from seed cluster-phases.json (YAML map; when: can skip).
+                        if [ -n "${PHASES:-}" ]; then
+                          ./cluster --cluster "${CLUSTER_ID}" plan --phases "${PHASES}"
+                          ./cluster --cluster "${CLUSTER_ID}" plan --json --phases "${PHASES}" > plan.json
+                        else
+                          ./cluster --cluster "${CLUSTER_ID}" plan
+                          ./cluster --cluster "${CLUSTER_ID}" plan --json > plan.json
+                        fi
+                        test -s plan.json
+                    '''
+                }
+            }
+        }
+
+        stage('Run') {
+            when {
+                expression { params.SKIP_DEPLOY != true }
+            }
+            steps {
+                script {
+                    if (!fileExists('plan.json')) {
+                        error 'plan.json missing — Plan stage must run first'
+                    }
+                    def plan = readJSON file: 'plan.json'
+                    def details = plan.stage_details ?: []
+                    if (details.isEmpty()) {
+                        echo 'Plan has no stages to run'
+                    }
+                    def total = details.size()
+                    details.eachWithIndex { st, idx ->
+                        def phaseRef = st.phase_ref as String
+                        def n = (idx as int) + 1
+                        // Match ./cluster plan text: "[1/4] atlas-compute-provision/provision"
+                        // (typical stack/k8s_full; pve_templates factory may start with …/templates)
+                        def stageName = "[${n}/${total}] ${phaseRef}"
+                        stage(stageName) {
+                            withOptionalGitSsh {
+                                runClusterPhase(phaseRef)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

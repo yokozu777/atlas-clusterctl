@@ -1,0 +1,274 @@
+# Public scaffold ``_template/k8s_full`` (exported from ``dev/k8s``).
+# Regenerate: python3 -m clusterctl.tools.export_template --from dev/k8s --template k8s_full --flatten-cascade
+# Init: ./cluster init <env>/<name> --template k8s_full
+#
+# Scrub live hostnames / secrets before committing the public template.
+
+schema_version: 2
+id: ''
+display_name: null
+playbooks:
+  atlas-compute-provision:
+    source: local
+    layout: roles/
+    shallow: true
+    sync: never
+    url: git@example.com:org/atlas-compute-provision.git
+    ref: main
+    entries:
+      templates:
+        file: playbooks/build_templates.yaml
+        invocations:
+        - tags: 00_ensure_workspace
+        - tags: 00_check_pve_templates,01_prepare_system
+        - tags: 02_download_images
+        - tags: 03_customize_images
+        - tags: 04_upload_images
+        - tags: 05_create_pve_templates
+        ansible:
+          strategy: linear
+          forks: 100
+      provision:
+        file: playbooks/provision_nodes.yaml
+        invocations:
+        - tags: 00_ensure_workspace
+        - tags: 00_validate_provision
+        - tags: 06_configure_git
+        - tags: 07_tf_state_pull
+        - tags: 08_generate_tf_vars
+        - tags: 09a_tf_destroy_dns
+        - tags: 09_hypervisor_cleaner
+        - tags: 10_tf_apply
+        - tags: provision_wait_ssh
+          root_ssh: true
+        - tags: 11_tf_state_push
+        git_ssh: true
+        ansible:
+          strategy: linear
+          forks: 100
+    path: atlas-compute-provision
+    path_relative_to: sibling
+  atlas-node-foundation:
+    source: local
+    layout: roles/
+    shallow: true
+    sync: never
+    url: git@example.com:org/atlas-node-foundation.git
+    ref: main
+    entries:
+      init:
+        file: playbooks/init_nodes.yaml
+        invocations:
+        - tags: 00_ensure_workspace
+        - tags: 00_gather_facts,00_init
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 01_backup_etc
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 02_init_sshd
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 03_configure_users
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 04_configure_hostname
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 06_configure_kernel
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 08_configure_security
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 09_configure_locales
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 10_manage_services
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 14_install_software
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 15_configure_journald
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 16_configure_bash
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 19_configure_sysctl_limits
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 20_disable_swap
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 21_grow_disk_to_full
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 22_extend_swap_to_root
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 23_init_data_disk
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 17_configure_network
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 18_remove_unwanted_services
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 11_certificates
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 13_configure_repo
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 12_date_timezone
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        - tags: 99_update_reboot
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
+        git_ssh: true
+        when:
+          inventory_groups_any:
+          - k8s_lbs
+          - k8s_masters
+          - k8s_workers
+    path: atlas-node-foundation
+    path_relative_to: sibling
+  atlas-k8s-core:
+    source: local
+    layout: roles/
+    readiness_markers:
+    - 00_controller_tooling
+    - 29_fetch_kubeconfig
+    shallow: true
+    sync: never
+    url: git@example.com:org/atlas-k8s-core.git
+    ref: main
+    entries:
+      cluster:
+        file: playbooks/cluster_core.yaml
+        invocations:
+        - tags: 00_ensure_workspace
+        - tags: 00_controller_tooling
+        - tags: 01_validate_vars
+        - tags: 02_gather_facts
+          limit: k8s_lbs:k8s_masters:k8s_workers
+        - tags: 03_sync_time
+          limit: k8s_lbs:k8s_masters:k8s_workers
+        - tags: 09_lb_vip_dns
+        - tags: 10_lb
+          limit: k8s_lbs
+        - tags: 11_k8s_hosts
+          limit: k8s_masters:k8s_workers
+        - tags: 04_cluster_state,21_kubeadm_init
+          limit: k8s_masters
+        - tags: 04_cluster_state,22_cluster_join_token
+        - tags: 29_fetch_kubeconfig
+        - tags: 04_cluster_state,23_join_masters
+          limit: k8s_masters
+        - tags: 04_cluster_state,24_join_workers,12_workers_kernel_rbd
+          limit: k8s_workers
+        - tags: 04_cluster_state,25_kubeadm_upgrade_control_plane
+          limit: k8s_masters
+        - tags: 04_cluster_state,26_kubeadm_upgrade_workers
+          limit: k8s_workers
+        when:
+          inventory_groups_any:
+          - k8s_masters
+    path: atlas-k8s-core
+    path_relative_to: sibling
+  atlas-k8s-addons:
+    source: local
+    layout: roles/
+    readiness_markers:
+    - 120_controller_tooling
+    - 210_helm_bootstrap
+    - 220_calico
+    - 310_prometheus
+    - 520_envoy_gateway
+    shallow: true
+    sync: never
+    url: git@example.com:org/atlas-k8s-addons.git
+    ref: main
+    entries:
+      addons:
+        file: playbooks/cluster_addons.yaml
+        invocations:
+        - tags: 110_workspace
+        - tags: 120_controller_tooling
+        - tags: 130_validate_vars
+        - tags: 140_fetch_kubeconfig
+        - tags: 210_helm_bootstrap
+        - tags: 220_calico
+        - tags: 310_prometheus
+        - tags: 320_blackbox
+        - tags: 330_prometheus_adapter
+        - tags: 340_calico_metrics
+        - tags: 410_snapshotter
+        - tags: 420_rook_operator
+        - tags: 430_rook_cluster
+        - tags: 440_rook_csi_drivers
+        - tags: 450_thanos
+        - tags: 510_metallb
+        - tags: 520_envoy_gateway
+        - tags: 530_external_dns
+        - tags: 540_cert_manager
+        - tags: 550_trust_manager
+        - tags: 560_apply_ingress
+        - tags: 610_elasticsearch_prepare
+        - tags: 620_elasticsearch
+        - tags: 630_kibana_prepare
+        - tags: 640_kibana
+        - tags: 650_fluentbit
+        - tags: 710_istio
+        - tags: 720_external_dns_istio
+        - tags: 730_tracing
+        - tags: 740_kiali
+        - tags: 800_chaos_mesh
+        - tags: 810_falco
+        - tags: 820_kyverno
+        - tags: 830_policy_reporter
+        - tags: 840_trivy
+        - tags: 910_cloudnative_pg
+        - tags: 920_keycloak
+        - tags: 930_keycloak_realm
+        - tags: 940_apiserver_oidc
+          limit: k8s_masters
+        - tags: 941_k8s_oidc
+        - tags: 942_pinniped
+        - tags: 950_mailu
+        - tags: 954_opencost
+        - tags: 960_oauth2_proxy
+        - tags: 961_apply_oidc_ingress
+        - tags: 962_headlamp
+        - tags: 970_consul
+        - tags: 971_vault
+        - tags: 972_external_secrets
+        - tags: 980_argocd
+        - tags: 982_argocd_rollouts
+        - tags: 990_rook_ceph_dashboard
+        - tags: 992_kibana_dashboards
+        - tags: 994_sentry
+        - tags: 996_cluster_report
+        - tags: 999_debug_tooling
+          limit: k8s_masters:k8s_workers
+        git_ssh: true
+        when:
+          inventory_groups_any:
+          - k8s_masters
+    path: atlas-k8s-addons
+    path_relative_to: sibling
+phases:
+- provision: atlas-compute-provision/provision
+- init: atlas-node-foundation/init
+- k8s-core: atlas-k8s-core/cluster
+- k8s-addons: atlas-k8s-addons/addons
+execution:
+  mode: local
+  image: yokozu/krang
+  tag: '336'
+cluster_id_aliases: {}
+inventory: hosts

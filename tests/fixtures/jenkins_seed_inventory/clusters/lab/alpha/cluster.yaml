@@ -1,0 +1,6 @@
+schema_version: 2
+execution:
+  mode: local
+phases:
+- provision: atlas-compute-provision/provision
+- init: atlas-node-foundation/init

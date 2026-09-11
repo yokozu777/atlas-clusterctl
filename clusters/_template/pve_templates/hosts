@@ -1,0 +1,7 @@
+# Minimal inventory — templates playbook targets localhost + dynamic PVE host.
+# No guest VMs are declared on this leaf (Phase 0 contract).
+
+all:
+  hosts: {}
+  vars:
+    ansible_python_interpreter: /usr/bin/python3

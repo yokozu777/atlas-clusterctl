@@ -1,0 +1,4 @@
+# Runtime dependency for clusterctl (YAML parse / dump).
+# Install: python3 -m pip install -r requirements.txt
+# Or editable: python3 -m pip install -e .
+PyYAML>=6.0

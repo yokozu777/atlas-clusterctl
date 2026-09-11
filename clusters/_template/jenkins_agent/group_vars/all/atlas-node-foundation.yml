@@ -1,0 +1,171 @@
+admin_user: localuser
+ansible_user: '{{ admin_user }}'
+initial_ssh_port: 22
+init_ssh_connect: key
+initial_key_file: ''
+initial_user: '{{ admin_user }}'
+backup_etc: false
+disable_root_login: false
+disable_password_auth: false
+change_default_ssh_port: false
+new_ssh_port: 2222
+system_user: '{{ admin_user }}'
+change_root_password: false
+enable_system_user_password: false
+pub_keys_folder: '{{ cluster_pub_keys_dir }}'
+copy_system_files: true
+configure_system_limits: true
+sysctl_kernel_modules:
+- br_netfilter
+- nf_conntrack
+sysctl_verify_critical:
+- key: vm.swappiness
+  value: '1'
+- key: vm.max_map_count
+  value: '2097152'
+- key: fs.file-max
+  value: '2097152'
+- key: net.ipv4.ip_forward
+  value: '1'
+- key: net.ipv6.conf.all.disable_ipv6
+  value: '1'
+- key: net.ipv6.conf.default.disable_ipv6
+  value: '1'
+- key: net.core.somaxconn
+  value: '4096'
+- key: net.ipv4.conf.all.rp_filter
+  value: '0'
+- key: net.ipv4.conf.default.rp_filter
+  value: '0'
+- key: net.bridge.bridge-nf-call-iptables
+  value: '1'
+- key: net.bridge.bridge-nf-call-ip6tables
+  value: '1'
+- key: net.netfilter.nf_conntrack_max
+  value: '1000000'
+disable_swap: true
+grow_disk_to_full: true
+extend_swap_to_root: true
+prepare_data_disk: false
+prepare_data_disk_use_inventory: true
+prepare_data_disk_inventory_slot: ''
+prepare_data_disk_min_size_gib: 50
+prepare_data_disk_mode: raw
+prepare_data_disk_wipe_existing_partitions: true
+configure_kernel_params: false
+pstate_performance: false
+amd_pstate: active
+intel_pstate: active
+change_smt: false
+smt: 'off'
+disable_ipv6: true
+default_kernel_params: ''
+iommu_param: ''
+configure_journald: true
+journald_disabled: false
+journald_max_disk_use: 2G
+journald_max_age: 30day
+journald_max_level: info
+journald_system_keep_free: 1G
+journald_logrotate_rotate: 4
+journald_logrotate_frequency: weekly
+remove_cloud_init: true
+remove_snap: true
+disable_systemd_resolved: true
+remove_unattended_upgrades: true
+disable_auditd: true
+disable_selinux: true
+apparmor_disable: true
+configure_locales: false
+additional_locales:
+- en_US.UTF-8 UTF-8
+- ru_RU.UTF-8 UTF-8
+default_locale: en_US.UTF-8
+services_to_disable: []
+harbor_host: harbor.example.com
+nexus_host: nexus.example.com
+certificates_configure: true
+pki_ca_url:
+- https://ca.example.com:8443/roots.pem
+- https://ca.example.com:8443/roots.pem
+ca_certificate_validate_certs: false
+custom_certs_dir: ''
+timezone: Europe/Moscow
+ntp_manage_host_chrony: true
+ntp_servers:
+- 192.168.1.53
+ntp_sync_settle_seconds: 10
+ntp_sync_max_offset_seconds: 1.0
+cleanup_repositories: true
+pkg_repo_base: https://nexus.example.com/repository
+pkg_repo_nginx_domain: repo.example.com
+pkg_repos:
+- name: ubuntu
+  enabled: true
+  uri: '{{ ''ubuntu'' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}'
+- name: debian-main
+  enabled: true
+  uri: '{{ ''debian-main'' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}'
+- name: debian-security
+  enabled: true
+  uri: '{{ ''debian-security'' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}'
+- name: OL9_baseos
+  enabled: true
+  uri: '{{ ''OL9_baseos'' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}'
+- name: OL9_appstream
+  enabled: true
+  uri: '{{ ''OL9_appstream'' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}'
+- name: OL9_developer_EPEL
+  enabled: true
+  uri: '{{ ''OL9_developer_EPEL'' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}'
+- name: OL9_codeready_builder
+  enabled: true
+  uri: '{{ ''OL9_codeready_builder'' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}'
+- name: OL10_baseos
+  enabled: true
+  uri: '{{ ''OL10_baseos'' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}'
+- name: OL10_appstream
+  enabled: true
+  uri: '{{ ''OL10_appstream'' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}'
+- name: OL10_developer_EPEL
+  enabled: true
+  uri: '{{ ''OL10_developer_EPEL'' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}'
+pkg_repos_extra:
+- name: ubuntu-containerd
+  enabled: true
+  uri: '{{ ''ubuntu-containerd'' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}'
+- name: debian-containerd
+  enabled: true
+  uri: '{{ ''debian-containerd'' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}'
+- name: yum_docker-ce-stable-9
+  enabled: true
+  uri: '{{ ''yum_docker-ce-stable-9'' | pkg_repo_nginx_uri(pkg_repo_nginx_domain)
+    }}'
+- name: yum_docker-ce-stable-10
+  enabled: true
+  uri: '{{ ''yum_docker-ce-stable-10'' | pkg_repo_nginx_uri(pkg_repo_nginx_domain)
+    }}'
+pkg_repo_apt_acquire_by_hash: true
+pgsql_version: '18'
+install_packages: qemu-guest-agent
+uninstall_packages: ''
+configure_bash: true
+bash_export_locale: false
+custom_bash_prompt: '\[\033[01;33m\]\u@\h\[\033[00m\]:\[\033[01;32m\]\w\[\033[00m\]
+  \[\033[01;34m\][\#]\[\033[01;31m\]\$\[\033[00m\] '
+bash_history_size: 10000
+node_foundation_network_serial: 100%
+network_interfaces: []
+dns_servers:
+- 192.168.1.53
+network_default_gateway: 192.168.1.1
+networkd_handoff_attempts: 45
+oracle_bootstrap_epel_enabled: true
+oracle_bootstrap_epel_repo_file: /etc/yum.repos.d/atlas-bootstrap-OL-developer-EPEL.repo
+update_now: false
+system_update_scheduler: false
+update_schedule_time: 03:00
+reboot_system: true
+dns_domain_suffix: example.com
+cluster_domain: jenkins.{{ dns_domain_suffix }}
+node_foundation_init_hosts: jslave

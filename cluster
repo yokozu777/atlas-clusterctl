@@ -1,0 +1,8 @@
+#!/bin/bash
+# Unified cluster CLI — python3 -m clusterctl
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export ATLAS_CLUSTER_ROOT="${ROOT}"
+cd "${ROOT}"
+exec python3 -m clusterctl "$@"

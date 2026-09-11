@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "atlas-clusterctl"
+version = "0.1.0"
+description = "Ansible controller CLI for Atlas clusters (schema v2 playbooks + phases)."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+authors = [{ name = "Atlas maintainers" }]
+keywords = ["ansible", "kubernetes", "proxmox", "cluster", "orchestration"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: System :: Systems Administration",
+]
+dependencies = [
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+# Contributor track (`pip install -e ".[dev]"`) mirrors requirements-dev.txt:
+# runtime deps only — unittest is stdlib. Ansible / ansible-lint / Galaxy
+# collections come from sibling playbook repos (not this package).
+# Intentionally empty beyond project.dependencies (no PyYAML duplicate).
+dev = []
+
+# Public Source / Documentation URLs are filled when opening an external remote
+# (see docs/pre-publish.md). Keep private forge hostnames and fake placeholders
+# out of product metadata — publish hygiene rejects org FQDNs.
+
+[project.scripts]
+# Prefer ./cluster from a git clone (sets ATLAS_CLUSTER_ROOT). This entry point
+# uses cwd / ATLAS_CLUSTER_ROOT the same way as python3 -m clusterctl.
+cluster = "clusterctl.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["clusterctl*"]
+exclude = ["tests*", "clusters*", "workspace*", "docs*", "examples*", "profiles*"]

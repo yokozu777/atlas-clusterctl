@@ -1,0 +1,8 @@
+# Inventory scaffold — customize for your cluster.
+# Reference: clusters/_template/k8s_full/hosts
+all:
+  children:
+    k8s_masters:
+      hosts: {}
+    k8s_workers:
+      hosts: {}

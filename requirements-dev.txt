@@ -1,0 +1,13 @@
+# Contributor / CI tools for atlas-clusterctl.
+# Runtime: requirements.txt (or `pip install -e .` / `pip install -e ".[dev]"`).
+#
+# Unit tests use the stdlib unittest runner only:
+#   python3 -m unittest discover -s tests
+#   ./tests/run_ci.sh
+#
+# The ``[dev]`` extra in pyproject.toml is intentionally empty beyond runtime
+# deps (no PyYAML duplicate). Live Ansible runs (./cluster run / play) need
+# Ansible 2.14+ on the controller and Galaxy collections from sibling playbook
+# repos — not declared here.
+
+-r requirements.txt

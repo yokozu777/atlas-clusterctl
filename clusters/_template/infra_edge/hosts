@@ -1,0 +1,20 @@
+all:
+  children:
+    infra_platform:
+      hosts:
+        192.168.1.240:
+          hostname: infra2.example.com
+          provision:
+            vmid: '219'
+            sockets: 1
+            cores: 2
+            memory: 8096
+            numa: false
+            clone: debian-base
+            disks:
+            - size: '100'
+              slot: 0
+              storage: local-zfs
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_user: localuser

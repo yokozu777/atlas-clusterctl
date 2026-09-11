@@ -1,0 +1,63 @@
+# PostgreSQL HA lab cluster application vars (atlas-postgresql roles 200–204)
+# Orchestration contract: docs/stacks/postgresql.md
+#
+# Inventory group names for sibling playbook targeting (keep in sync with hosts + cluster.yaml limits).
+
+# Leaf DNS identity
+# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+dns_domain_suffix: example.com
+cluster_domain: "pgsql.{{ dns_domain_suffix }}"
+
+pgsql_etcd_hosts: pgsql_etcd_cluster
+pgsql_cluster_hosts: pgsql_cluster
+pgsql_lb_hosts: pgsql_lbs
+
+pgsql_version: "18"
+patroni_cluster_name: "{{ cluster_domain | replace('.', '-') }}"
+
+vip_address: "192.168.1.129"
+# vip_auth_pass / DB passwords → atlas-postgresql.secrets.yml
+# vip_interface: auto (role uses ansible_default_ipv4.interface; override for multi-NIC)
+virtual_router_id: 41
+
+etcd_download_mirror_url: "https://example.com/images/etcd-v3.7.0-linux-amd64.tar.gz"
+# Optional Nexus (or other) mirror — overrides GitHub when set:
+# etcd_download_mirror_url: "https://nexus.example.com/repository/etcd/etcd-{{ etcd_version }}-linux-amd64.tar.gz"
+etcd_download_use_github_proxy: true
+etcd_download_github_proxy: "192.168.1.212:9119"
+etcd_version: v3.7.0
+etcd_client_port: 2379
+etcd_peer_port: 2380
+
+# auto | new | existing — leave auto for idempotent re-runs and scale-out.
+etcd_cluster_bootstrap: auto
+
+# Omit patroni_pip_version to install the latest Patroni from PyPI.
+# patroni_pip_version: "4.1.4"
+
+patroni_rest_port: 8008
+patroni_rest_listen: "0.0.0.0:8008"
+patroni_pg_port: 5432
+patroni_pg_listen: "0.0.0.0:5432"
+# Per-OS paths are resolved in patroni.yml.j2 (Debian vs RedHat). Override only when needed.
+# patroni_data_dir: ...
+# patroni_config_dir: "{{ patroni_data_dir }}"
+patroni_reinit: false
+patroni_reinit_wipe_etcd: false
+# Legacy lab cluster uses md5; set scram-sha-256 (role default) on greenfield reinit.
+pgsql_password_encryption: scram-sha-256
+pgsql_pgdg_repo_from_init: true
+# Expect catalog drop-ins from atlas-node-foundation (pgdg-apt.sources / pgdg-yum.repo)
+
+pgbouncer_listen_port: 6432
+pgbouncer_listen_addr: "0.0.0.0"
+pgbouncer_users:
+  - username: postgres
+    password: "{{ pgsql_postgres_password }}"
+
+haproxy_rw_port: 5432
+haproxy_ro_port: 5433
+haproxy_log_facility: local0
+haproxy_maxconn: 5000
+
+keepalived_script_path: /usr/local/bin/check_patroni_master.sh

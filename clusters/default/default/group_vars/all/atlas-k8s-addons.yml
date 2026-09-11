@@ -1,0 +1,10 @@
+# atlas-k8s-addons vars (helm charts, ingress hosts) — customize for your stack.
+# Reference: clusters/_template/k8s_full/group_vars/all/atlas-k8s-addons.yml
+
+# Leaf DNS identity
+# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+dns_domain_suffix: example.com
+cluster_domain: "k8s.{{ dns_domain_suffix }}"
+k8s_cluster_domain: "{{ cluster_domain }}"
+
+use_internal_helm_repo: none

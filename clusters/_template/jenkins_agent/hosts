@@ -1,0 +1,46 @@
+all:
+  children:
+    jslave:
+      hosts:
+        192.168.1.240:
+          hostname: jenkins-agent01.example.com
+          provision:
+            vmid: "5200"
+            sockets: 1
+            cores: 4
+            memory: 8384
+            numa: false
+            clone: oracle-base
+            disks:
+              - size: "100"
+                slot: 0
+                storage: local-zfs
+        192.168.1.241:
+          hostname: jenkins-agent02.example.com
+          provision:
+            vmid: "5201"
+            sockets: 1
+            cores: 4
+            memory: 16384
+            numa: false
+            clone: ubuntu-base
+            disks:
+              - size: "100"
+                slot: 0
+                storage: local-zfs
+        192.168.1.242:
+          hostname: jenkins-agent03.example.com
+          provision:
+            vmid: "5202"
+            sockets: 1
+            cores: 4
+            memory: 16384
+            numa: false
+            clone: debian-base
+            disks:
+              - size: "100"
+                slot: 0
+                storage: local-zfs                
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_user: localuser

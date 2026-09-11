@@ -1,0 +1,16 @@
+###############################################################################
+# Cluster leaf: default — atlas-infra-edge overlay (stub)
+# -----------------------------------------------------------------------------
+# Purpose : Placeholder; customize BIND / registry / nginx cache for your site
+# Reference: clusters/_template/infra_edge/group_vars/all/atlas-infra-edge.yml
+# Docs     : docs/stacks/infra-edge.md
+#
+# Public k8s_full does not ship atlas-infra-edge.yml — use --template infra_edge.
+###############################################################################
+
+# Leaf DNS identity
+# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+dns_domain_suffix: example.com
+cluster_domain: "k8s.{{ dns_domain_suffix }}"
+k8s_cluster_domain: "{{ cluster_domain }}"
+

@@ -1,0 +1,27 @@
+# Kafka KRaft HA lab application vars (atlas-kafka roles 200–203)
+# Orchestration contract: docs/stacks/kafka.md
+#
+# Inventory group names for sibling playbook targeting (keep in sync with hosts + cluster.yaml limits).
+
+# Leaf DNS identity
+# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+dns_domain_suffix: example.com
+cluster_domain: "kafka.{{ dns_domain_suffix }}"
+
+kafka_controller_hosts: kafka_controllers
+kafka_broker_hosts: kafka_brokers
+#
+# OS package drop-ins: env default pkg_repos (+ optional leaf pkg_repos_extra on atlas-node-foundation.yml)
+
+kafka_version: "4.3.1"
+kafka_scala_version: "2.13"
+kafka_broker_port: 9092
+kafka_controller_port: 9093
+kafka_security_mode: plaintext
+
+# Optional HTTP(S) mirror — overrides Apache downloads when set (lab SoT; not a sibling default):
+# kafka_download_mirror_url: "https://mirror.example.com/kafka/kafka_2.13-4.3.1.tgz"
+kafka_download_mirror_url: ""
+kafka_download_url: ""
+
+kafka_heap_opts: "-Xms1G -Xmx1G"

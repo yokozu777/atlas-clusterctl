@@ -1,0 +1,8 @@
+all:
+  children:
+    alpha:
+      hosts:
+        10.40.0.1:
+          hostname: alpha01.test
+        10.40.0.2:
+          hostname: alpha02.test
