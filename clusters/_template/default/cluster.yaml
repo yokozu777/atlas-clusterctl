@@ -1,0 +1,29 @@
+# Public scaffold ``_template/default`` (exported from ``dev/default``).
+# Regenerate: python3 -m clusterctl.tools.export_template --from dev/default --template default --flatten-cascade
+# Init: ./cluster init <env>/<name> --template default
+#
+# Scrub live hostnames / secrets before committing the public template.
+
+# Dev environment policy (cascade layer 2) — NOT deployable.
+# Customize env-wide overrides: local sibling repos, cluster_id_aliases, execution defaults.
+# Reference: clusters/dev/k8s/cluster.yaml (self-contained reference cluster).
+
+schema_version: 2
+id: ''
+display_name: null
+
+# cluster_id_aliases:
+#   my-legacy-name: dev/mycluster
+
+# playbooks:
+#   atlas-k8s-core:
+#     source: local
+#     path: atlas-k8s-core
+#     path_relative_to: sibling
+#     layout: roles/
+#     sync: never
+
+# execution:
+#   mode: docker
+#   image: harbor.example.com/library/krang
+#   tag: latest

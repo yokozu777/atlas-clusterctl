@@ -4,6 +4,11 @@
 #
 # Scrub live hostnames / secrets before committing the public template.
 
+# Reference deployable k8s cluster — self-contained (playbooks, phases, vars).
+# Infra platform is a separate leaf: clusters/ci/infra (docs/stacks/infra-edge.md).
+# Copy scaffold: ./cluster init <id> --template k8s_full
+# Orchestration: docs/stacks/compute-provision.md, docs/stacks/k8s-core.md, docs/stacks/k8s-addons.md
+
 schema_version: 2
 id: ''
 display_name: null
@@ -13,7 +18,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-compute-provision.git
+    url: git@github.com:yokozu777/atlas-compute-provision.git
     ref: main
     entries:
       templates:
@@ -53,7 +58,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-node-foundation.git
+    url: git@github.com:yokozu777/atlas-node-foundation.git
     ref: main
     entries:
       init:
@@ -145,7 +150,7 @@ playbooks:
     - 29_fetch_kubeconfig
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-k8s-core.git
+    url: git@github.com:yokozu777/atlas-k8s-core.git
     ref: main
     entries:
       cluster:
@@ -163,6 +168,8 @@ playbooks:
           limit: k8s_lbs
         - tags: 11_k8s_hosts
           limit: k8s_masters:k8s_workers
+        # Lifecycle gates: co-tag 04_cluster_state in the same ansible-playbook
+        # process (set_fact is in-memory only across tag-split invocations).
         - tags: 04_cluster_state,21_kubeadm_init
           limit: k8s_masters
         - tags: 04_cluster_state,22_cluster_join_token
@@ -191,7 +198,7 @@ playbooks:
     - 520_envoy_gateway
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-k8s-addons.git
+    url: git@github.com:yokozu777/atlas-k8s-addons.git
     ref: main
     entries:
       addons:
@@ -223,6 +230,7 @@ playbooks:
         - tags: 630_kibana_prepare
         - tags: 640_kibana
         - tags: 650_fluentbit
+        # Mesh: istio-system must exist before Kiali CR; tracing before Kiali (Jaeger wait).
         - tags: 710_istio
         - tags: 720_external_dns_istio
         - tags: 730_tracing
@@ -247,6 +255,7 @@ playbooks:
         - tags: 970_consul
         - tags: 971_vault
         - tags: 972_external_secrets
+        # Heavy charts after lighter platform services (API/etcd load).
         - tags: 980_argocd
         - tags: 982_argocd_rollouts
         - tags: 990_rook_ceph_dashboard
@@ -267,8 +276,8 @@ phases:
 - k8s-core: atlas-k8s-core/cluster
 - k8s-addons: atlas-k8s-addons/addons
 execution:
-  mode: local
+  mode: docker
   image: yokozu/krang
-  tag: '336'
+  tag: latest
 cluster_id_aliases: {}
 inventory: hosts

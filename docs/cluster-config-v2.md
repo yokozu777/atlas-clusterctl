@@ -140,7 +140,7 @@ Orchestration: [compute-provision.md](stacks/compute-provision.md), [k8s-core.md
 Infra (DNS/CA/registry) is a **separate** template — see [infra-edge.md](stacks/infra-edge.md) (`infra_edge`).
 
 Public full-k8s template: **4 phases** (starts at ``provision``; golden PVE
-templates are ``--template pve_templates``), on the order of **95** ansible
+templates are ``--template pve_templates``), on the order of **105** ansible
 invocations (count changes with YAML — do not hardcode in CI forever).
 
 ## Data-plane / agent / infra scaffolds

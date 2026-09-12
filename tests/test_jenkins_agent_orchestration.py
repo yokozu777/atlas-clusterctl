@@ -88,7 +88,10 @@ class JenkinsAgentOrchestrationTest(unittest.TestCase):
         self.assertIn("docs/stacks/jenkins-agent.md", text)
         self.assertNotIn("jenkins_admin_password:", text)
         self.assertIn("jenkins_admin_password:", secrets)
-        self.assertIn("CHANGEME", secrets)
+        self.assertRegex(
+            secrets,
+            r"(?m)^jenkins_admin_password:\s*(''|\"\"|CHANGEME)\s*$",
+        )
         self.assertNotIn("Welcomeback", text)
 
     @skip_unless_stack(STACK)

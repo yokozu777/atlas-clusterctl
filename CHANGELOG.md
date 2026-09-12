@@ -4,6 +4,20 @@ All notable changes to `atlas-clusterctl` / `clusterctl` are documented here.
 
 ## [Unreleased] — publish readiness
 
+### Changed (public `_template` refresh from inventory `dev/`)
+
+- Regenerated stack scaffolds from `atlas-inventory/clusters/dev/*` via
+  `export_template --flatten-cascade` (`k8s_full`, `infra_edge`, `jenkins_agent`,
+  `gitlab_runner`, `postgresql`, `redis`, `kafka`, `pve_templates`).
+- New `_template/default` env-policy overlay (from `dev/default`); parent
+  `_template/` minimal scaffold is unchanged.
+- `export_template` copies the full leaf tree, preserves YAML comments
+  (block merge / line scrub, no `ruamel.yaml`), and allows `--from <env>/default`.
+- Public `_template/*/cluster.yaml` playbook `url:` values point at GitHub
+  role repos (`git@github.com:yokozu777/atlas-*.git`).
+- Public `_template` scaffolds use `execution.mode: docker` and
+  `execution.tag: latest` (`yokozu/krang`).
+
 ### Changed (Jenkins seed — AGENT choice from seed)
 
 - Deploy job ``AGENT`` is a plain ``choiceParam`` filled at seed time from

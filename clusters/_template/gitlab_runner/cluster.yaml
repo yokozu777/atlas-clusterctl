@@ -4,6 +4,11 @@
 #
 # Scrub live hostnames / secrets before committing the public template.
 
+# Reference deployable GitLab CI runners — provision → init → runner (golden templates: lab/pve-templates).
+# Copy scaffold: ./cluster init <id> --template gitlab_runner
+# Orchestration contract: docs/stacks/gitlab-runner.md
+# Does not touch dev/k8s or k8s stacks.
+
 schema_version: 2
 id: ''
 display_name: null
@@ -13,7 +18,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-compute-provision.git
+    url: git@github.com:yokozu777/atlas-compute-provision.git
     ref: main
     entries:
       templates:
@@ -53,7 +58,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-node-foundation.git
+    url: git@github.com:yokozu777/atlas-node-foundation.git
     ref: main
     entries:
       init:
@@ -101,7 +106,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-gitlab-runner.git
+    url: git@github.com:yokozu777/atlas-gitlab-runner.git
     ref: main
     entries:
       runner:
@@ -123,8 +128,8 @@ phases:
 - init: atlas-node-foundation/init
 - gitlab-runner: atlas-gitlab-runner/runner
 execution:
-  mode: local
+  mode: docker
   image: yokozu/krang
-  tag: '336'
+  tag: latest
 cluster_id_aliases: {}
 inventory: hosts

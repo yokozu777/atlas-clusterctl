@@ -128,7 +128,7 @@ pkg_repo_upstreams:
 enable_repo_k8s_1_36: true                 # kubelet, kubeadm, kubectl (pkgs.k8s.io)
 enable_repo_yum_docker_ce_stable_9: true    # docker-ce, containerd.io, compose/buildx plugins
 enable_repo_yum_docker_ce_stable_10: true
-enable_repo_k8s_ubuntu_1_36: true           # kubelet, kubeadm, kubectl (Debian и Ubuntu k8s-ноды)
+enable_repo_k8s_ubuntu_1_36: true
 
 # --- Oracle Linux 9 ---
 enable_repo_OL9_baseos: true               # chrony, parted, rsync, cronie, logrotate, keepalived, dnf-plugins-core, …
@@ -141,8 +141,8 @@ enable_repo_OL9_kvm: false
 enable_repo_OL9_MODRHCK: false
 enable_repo_OL9_oraclelinuxmanager210: false
 enable_repo_OL9_RDMA: false
-enable_repo_OL9_UEKR7: true                 # kernel-uek-modules-core (базовые модули)
-enable_repo_OL9_UEKR8: true                  # kernel-uek-modules-extra-netfilter* (ip_vs, Rook/Ceph rbd; пакеты есть в UEKR8, не в UEKR7)
+enable_repo_OL9_UEKR7: true
+enable_repo_OL9_UEKR8: true
 
 # --- Oracle Linux 10 ---
 enable_repo_OL10_baseos: true
@@ -156,12 +156,12 @@ enable_repo_OL10_builder: false
 
 # --- Debian ---
 enable_repo_debian_main: true                # chrony, parted, rsync, lvm2, logrotate, keepalived, cron, …
-enable_repo_debian_security: true            # security updates для base packages
-enable_repo_debian_non_free: false          # в ролях non-free не используется
+enable_repo_debian_security: true
+enable_repo_debian_non_free: false
 enable_repo_debian_containerd: true        # docker-ce, containerd.io (infra Debian, 01/11)
 
 # --- Ubuntu ---
-enable_repo_ubuntu: true                     # archive: main/universe + security (+ backports в sources)
+enable_repo_ubuntu: true
 enable_repo_ubuntu_containerd: true        # docker-ce, containerd.io (01/11)
 
 # --- PostgreSQL PGDG (warm on ci/infra; catalog parity) ---

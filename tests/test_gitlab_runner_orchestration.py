@@ -91,7 +91,10 @@ class GitLabRunnerOrchestrationTest(unittest.TestCase):
         self.assertIn("docs/stacks/gitlab-runner.md", text)
         self.assertNotIn("gitlab_runner_authentication_token:", text)
         self.assertIn("gitlab_runner_authentication_token:", secrets)
-        self.assertIn("CHANGEME", secrets)
+        self.assertRegex(
+            secrets,
+            r"(?m)^gitlab_runner_authentication_token:\s*(''|\"\"|CHANGEME)\s*$",
+        )
 
     @skip_unless_stack(STACK)
     def test_lab_gitlab_runner_yml_targeting(self) -> None:

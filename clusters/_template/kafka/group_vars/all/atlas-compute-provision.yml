@@ -1,40 +1,84 @@
+###############################################################################
+# Cluster leaf: ci/kafka — atlas-compute-provision overlay
+# -----------------------------------------------------------------------------
+# Purpose : Proxmox VM / DNS / TF state knobs for this leaf
+# Defaults: sibling playbooks/group_vars/all/provision_defaults.yml
+# Docs    : docs/stacks/compute-provision.md
+#
+# Prefer atlas-compute-provision.secrets.yml (or Vault) for tokens/passwords.
+###############################################################################
+
+# =============================================================================
+# Stack
+# =============================================================================
+# TF layout under stacks/<name>/ — kafka leaf (controllers/brokers).
+
+# Leaf DNS identity
+# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
 provision_gateway: 192.168.1.1
-provision_pve_host: 192.168.1.20
+
+# =============================================================================
+# Proxmox — SSH (image upload / qm) + API (Terraform)
+# =============================================================================
+provision_pve_host: "192.168.1.20" # provision_pve_host: "192.168.1.245"
 provision_pve_user: root
 provision_pve_inventory_name: pve
 provision_pve_inventory_group: proxmox
-provision_proxmox_api_url: https://{{ provision_pve_host }}:8006/api2/json
-provision_proxmox_target_node: pve
+
+provision_proxmox_api_url: "https://{{ provision_pve_host }}:8006/api2/json"
+provision_proxmox_target_node: pve # proxmox2
 provision_proxmox_parallel: 40
 provision_tf_parallelism: 3
+
+# =============================================================================
+# DNS — RFC2136 / TSIG
+# =============================================================================
 dns_server_ip: 192.168.1.53
-provision_dns_server: '{{ dns_server_ip | default(provision_gateway) }}'
-provision_dns_zone: '{{ dns_domain_suffix }}.'
-provision_dns_key_name: '{{ dns_domain_suffix }}.'
+provision_dns_server: "{{ dns_server_ip | default(provision_gateway) }}"
+provision_dns_zone: "{{ dns_domain_suffix }}."
+provision_dns_key_name: "{{ dns_domain_suffix }}."
 provision_dns_key_algorithm: hmac-sha256
 provision_dns_transport: tcp4
 provision_dns_tf_manage_a_records: true
+
+# =============================================================================
+# Guest VM defaults (clone / disk / cloud-init)
+# =============================================================================
 provision_vm_full_clone: false
 provision_vm_cloudinit_storage: local-zfs
 provision_vm_disk_cache: unsafe
 provision_vm_disk_format: raw
 provision_vm_network_bridge: vmbr0
 provision_vm_ciuser: root
-provision_ssh_public_key_file: '{{ cluster_pub_keys_dir }}/localuser.pub'
-provision_tf_state_local_dir: '{{ atlas_inventory_root }}'
+provision_ssh_public_key_file: "{{ cluster_pub_keys_dir }}/localuser.pub"
+
+# =============================================================================
+# Terraform providers (krang image filesystem mirror; non-root readable)
+# =============================================================================
+provision_tf_plugin_dir: /usr/local/share/terraform/plugins
+
+# =============================================================================
+# Terraform state (git)
+# =============================================================================
+provision_tf_state_local_dir: "{{ atlas_inventory_root }}"
 provision_tf_state_git_discard_local: true
-gitea_host: example.com
-provision_tf_state_repo: git@{{ gitea_host }}:org/atlas-inventory.git
+gitea_host: "example.com"
+provision_tf_state_repo: "git@{{ gitea_host }}:org/atlas-inventory.git"
 provision_tf_state_branch: main
 provision_tf_state_git_push: true
-git_user_name: atlas-runner
-git_user_email: atlas-runner@example.com
+git_user_name: "atlas-runner"
+git_user_email: "atlas-runner@example.com"
 dns_domain_suffix: example.com
-cluster_domain: kafka.{{ dns_domain_suffix }}
+cluster_domain: "kafka.{{ dns_domain_suffix }}"
+
 provision_stack: kafka
+# Lifecycle: apply | recreate | destroy
 provision_mode: recreate
-provision_hosts_file: '{{ cluster_inventory | default(cluster_config_dir ~ ''/hosts'',
-  true) }}'
+
+# =============================================================================
+# Inventory → Terraform maps
+# =============================================================================
+provision_hosts_file: "{{ cluster_inventory | default(cluster_config_dir ~ '/hosts', true) }}"
 provision_inventory_group_map_kafka:
   kafka_controllers: kafka_controller_node
   kafka_brokers: kafka_broker_node

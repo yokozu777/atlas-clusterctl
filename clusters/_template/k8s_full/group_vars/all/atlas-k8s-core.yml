@@ -140,6 +140,8 @@ containerd_registry_mirrors:
   - { dir_name: opensearchproject, server: "https://opensearchproject", mirror_path: docker-hub }
   - { dir_name: redislabs, server: "https://redislabs", mirror_path: docker-hub }
   - { dir_name: rook, server: "https://rook", mirror_path: docker-hub }
+  # GHCR vanity: share ghcr.io pull-through (hosts.toml slug from mirror_path).
+  - { dir_name: reg.kyverno.io, server: "https://ghcr.io", mirror_path: ghcr.io }
   - { dir_name: "{{ nexus_host }}", server: "https://{{ nexus_host }}", direct: true }
 
 # =============================================================================

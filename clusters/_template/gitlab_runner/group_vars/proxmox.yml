@@ -1,5 +1,4 @@
 ---
-# Proxmox hypervisor — FQDN, SSH и inventory из vars-file.yml (provision_pve_*)
 ansible_host: "{{ provision_pve_host }}"
 ansible_user: "{{ provision_pve_user }}"
 ansible_ssh_user: "{{ provision_pve_user }}"

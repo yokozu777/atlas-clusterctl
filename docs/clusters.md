@@ -118,6 +118,8 @@ Orchestration (phases / tags / vars bridge): docs above. Init index: [`clusters/
 | postgresql | `./cluster init prod/pgsql --template postgresql` |
 | redis | `./cluster init prod/redis --template redis` |
 | kafka | `./cluster init prod/kafka --template kafka` |
+| PVE images | `./cluster init lab/pve-templates --template pve_templates` |
+| env policy | `./cluster init lab/policy --template default` |
 
 Copy from an existing leaf (if present locally):
 

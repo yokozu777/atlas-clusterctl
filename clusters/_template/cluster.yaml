@@ -11,7 +11,7 @@ inventory: hosts
 # Do not add phase_aliases: — short names live inline in phases:.
 
 execution:
-  mode: local
+  mode: docker
   image: yokozu/krang
-  tag: "336"
+  tag: latest
 

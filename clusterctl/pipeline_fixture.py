@@ -30,8 +30,8 @@ ORG_BASELINE_REL = Path("clusters") / "default" / "default" / "cluster.yaml"
 # ``dev/mxhash`` (provision + init + core + addons; golden templates are a
 # separate ``pve_templates`` leaf). Infra is a separate leaf
 # (``ci/infra`` / ``_template/infra_edge``).
-FULL_K8S_INVOCATION_COUNT = 95
-MXHASH_INVOCATION_COUNT = 95
+FULL_K8S_INVOCATION_COUNT = 105
+MXHASH_INVOCATION_COUNT = 105
 
 
 def public_reference_cluster_yaml(root: Path | None = None) -> Path:

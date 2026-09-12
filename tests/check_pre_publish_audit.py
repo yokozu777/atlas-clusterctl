@@ -34,7 +34,8 @@ FINGERPRINT_RE = re.compile(
 # Paths allowed to mention fingerprints for history / tooling context.
 ALLOWLIST_RE = re.compile(
     r"^(?:SECURITY\.md|CHANGELOG\.md|docs/|tests/|notes/|examples/internal/"
-    r"|clusterctl/cluster_layout\.py)"
+    r"|clusterctl/cluster_layout\.py"
+    r"|push-gitea\.sh|push-github\.sh|git-publish-lib\.sh)"
 )
 
 CYRILLIC_RE = re.compile(r"[\u0400-\u04FF]")

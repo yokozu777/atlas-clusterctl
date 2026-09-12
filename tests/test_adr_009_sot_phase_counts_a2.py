@@ -94,7 +94,7 @@ class Adr009SotPhaseCountsA2Test(unittest.TestCase):
         self.assertIn("Infra platform only (**4 phases**", text)
         self.assertIn("pve_templates", text)
         self.assertIn("**4 phases**", text)
-        self.assertRegex(text, r"on the order of \*\*95\*\*")
+        self.assertRegex(text, r"on the order of \*\*105\*\*")
         self.assertIsNone(
             _STALE_FIVE_PHASES.search(text),
             "cluster-config-v2.md still claims 5 phases for SoT leaves",

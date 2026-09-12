@@ -27,7 +27,6 @@ infra_platform_hosts: infra_platform
 nexus_host: "example.com"
 nexus_base_url: "https://{{ nexus_host }}/repository"
 harbor_host: "harbor.{{ dns_domain_suffix }}"
-harbor_mirror_base: "https://{{ harbor_host }}/v2"
 
 setup_bind: true
 setup_ntp: true
@@ -219,7 +218,7 @@ stepca_listen_ip: "{{ dns_server_ip }}"
 stepca_https_port: 8443
 stepca_container_https_port: 9000
 stepca_ocsp_port: 9000
-stepca_init_name: Internal CA
+stepca_init_name: Example Internal CA
 stepca_init_dns_names: "ca.{{ dns_domain_suffix }},localhost"
 # ACME / TLS issuance hostname (infra-edge compose TLS scripts).
 # Not node-foundation pki_ca_url (roots.pem trust-store list).
@@ -302,6 +301,11 @@ containerd_registry_mirrors:
   - dir_name: rook
     server: "https://rook"
     mirror_path: docker-hub
+  # GHCR vanity: dedicated pull-through to https://reg.kyverno.io cannot do Bearer.
+  # Share the ghcr.io proxy (duplicate server is skipped in compose render).
+  - dir_name: reg.kyverno.io
+    server: "https://ghcr.io"
+    mirror_path: ghcr.io
   - dir_name: "{{ nexus_host }}"
     server: "https://{{ nexus_host }}"
     direct: true
@@ -432,14 +436,10 @@ pkg_repo_nginx_cache_valid_metadata: 1m
 pkg_repo_nginx_cache_valid_metadata_not_found: 1m
 pkg_repo_nginx_cache_valid_not_found: 1m
 pkg_repo_nginx_cache_warm_enabled: true
-pkg_repo_nginx_cache_warm_mode: light
+pkg_repo_nginx_cache_warm_mode: full
 pkg_repo_nginx_cache_warm_debian_suite: trixie
 pkg_repo_nginx_cache_warm_ubuntu_suite: resolute
-pkg_repo_nginx_cache_warm_pgsql_version: "{{ pgsql_version | default('18') }}"
-pkg_repo_nginx_cache_warm_pgdg_rhel_majors:
-  - 9
-  - 10
-pkg_repo_nginx_cache_warm_timeout: 300
+pkg_repo_nginx_cache_warm_timeout: 3600
 pkg_repo_nginx_cache_warm_wait_retries: 60
 pkg_repo_nginx_cache_warm_wait_delay: 5
 pkg_repo_nginx_cache_warm_curl_connect_timeout: 5
@@ -773,8 +773,12 @@ helm_repo_nginx_releases_github_allowlist:
   - istio/istio/releases/download
   - etcd-io/etcd/releases/download
   - vmware/pinniped/releases/download
-# Explicit github.com paths to curl -L into helm_repo_nginx_releases_dir (empty in product).
-helm_repo_releases_warm_specs: []
+# Keep in sync with atlas-k8s-addons debug-tooling (calicoctl / istioctl / etcdctl / pinniped CLI).
+helm_repo_releases_warm_specs:
+  - path: projectcalico/calico/releases/download/v3.32.1/calicoctl-linux-amd64
+  - path: istio/istio/releases/download/1.30.3/istioctl-1.30.3-linux-amd64.tar.gz
+  - path: etcd-io/etcd/releases/download/v3.6.12/etcd-v3.6.12-linux-amd64.tar.gz
+  - path: vmware/pinniped/releases/download/v0.47.0/pinniped-cli-linux-amd64
 helm_repo_nginx_shared_with_registry: true
 helm_repo_tls_enabled: true
 helm_repo_tls_dir: /opt/helm-repo-nginx/certs
@@ -792,6 +796,48 @@ helm_repo_tls_cron_minute: 30
 helm_repo_tls_cron_log_file: /var/log/helm-repo-tls-renew.log
 helm_repo_tls_cron_service_name: cron
 compose_systemd_helm_repo_nginx_unit_name: helm-repo-nginx-compose
+helm_repo_nginx_cache_warm_timeout: 7200
+# Platform charts to pull through helm-nginx before seed/bake (empty version = latest).
+helm_repo_cache_warm_specs:
+  - { repo: oauth2-proxy, chart: oauth2-proxy, version: "10.7.0" }
+  - { repo: falcosecurity, chart: falco, version: "9.1.0" }
+  - { repo: projectcalico, chart: tigera-operator, version: "v3.32.1" }
+  - { repo: metallb, chart: metallb, version: "0.16.1" }
+  - { repo: prometheus-community, chart: kube-prometheus-stack, version: "88.5.3" }
+  - { repo: prometheus-community, chart: prometheus-adapter, version: "5.3.0" }
+  - { repo: prometheus-community, chart: prometheus-blackbox-exporter, version: "11.17.2" }
+  - { repo: prometheus-community, chart: prometheus-elasticsearch-exporter, version: "7.4.0" }
+  - { repo: ceph-csi-operator, chart: ceph-csi-drivers, version: "1.0.4" }
+  - { repo: rook-release, chart: rook-ceph, version: "v1.20.6" }
+  - { repo: rook-release, chart: rook-ceph-cluster, version: "v1.20.6" }
+  - { repo: fluent, chart: fluent-bit, version: "0.58.1" }
+  - { repo: elastic, chart: elasticsearch, version: "8.5.1" }
+  - { repo: elastic, chart: kibana, version: "8.5.1" }
+  - { repo: hashicorp, chart: vault, version: "0.34.1" }
+  - { repo: hashicorp, chart: consul, version: "2.0.3" }
+  - { repo: istio, chart: base, version: "1.30.3" }
+  - { repo: istio, chart: istiod, version: "1.30.3" }
+  - { repo: istio, chart: gateway, version: "1.30.3" }
+  - { repo: kiali, chart: kiali-operator, version: "2.30.0" }
+  - { repo: argo, chart: argo-cd, version: "10.4.0" }
+  - { repo: argo, chart: argo-rollouts, version: "2.41.1" }
+  - { repo: codecentric, chart: keycloakx, version: "7.2.2" }
+  - { repo: jetstack, chart: cert-manager, version: "v1.21.1" }
+  - { repo: jetstack, chart: trust-manager, version: "v0.24.0" }
+  - { repo: chaos-mesh, chart: chaos-mesh, version: "2.8.4" }
+  - { repo: external-secrets, chart: external-secrets, version: "0.20.4" }
+  - { repo: external-dns, chart: external-dns, version: "1.21.1" }
+  - { repo: jaegertracing, chart: jaeger, version: "4.12.0" }
+  - { repo: open-telemetry, chart: opentelemetry-collector, version: "0.170.0" }
+  - { repo: cnpg, chart: cloudnative-pg, version: "0.29.0" }
+  - { repo: headlamp, chart: headlamp, version: "0.44.0" }
+  - { repo: thanos-community, chart: thanos, version: "0.32.0" }
+  - { repo: kyverno, chart: kyverno, version: "3.9.0" }
+  - { repo: policy-reporter, chart: policy-reporter, version: "3.9.1" }
+  - { repo: opencost, chart: opencost, version: "2.5.30" }
+  - { repo: sentry, chart: sentry, version: "33.7.0" }
+  - { repo: metrics-server, chart: metrics-server, version: "3.14.0" }
+  - { repo: kubevious, chart: kubevious, version: "1.2.2" }
 
 # =============================================================================
 # Custom static nginx
@@ -877,16 +923,13 @@ compose_systemd_infra_stats_unit_name: infra-stats-compose
 # SSH password lives in atlas-infra-edge.secrets.yml (nginx_cache_sync_ssh_password).
 # =============================================================================
 
-nginx_cache_sync_enabled: true
+nginx_cache_sync_enabled: false
 nginx_cache_sync_direction: pull
 nginx_cache_sync_remote_host: 192.168.1.212
 nginx_cache_sync_remote_port: 2224
 nginx_cache_sync_remote_dir: /home/uploader/infra-cache-mirror
 nginx_cache_sync_remote_user: uploader
 nginx_cache_sync_ssh_auth: password
-nginx_cache_sync_ownership_resolve: static
-nginx_cache_sync_nginx_uid: 101
-nginx_cache_sync_nginx_gid: 101
 nginx_cache_sync_ssh_private_key: "{{ ansible_ssh_private_key_file | default(lookup('env', 'SSH_KEY')) }}"
 nginx_cache_sync_pkg_repo_enabled: true
 nginx_cache_sync_helm_repo_enabled: true
@@ -899,19 +942,20 @@ nginx_cache_sync_warm_after_pull: true
 nginx_cache_sync_skip_if_fresh: true
 nginx_cache_sync_fresh_max_age_hours: 24
 
-# OCI seed off on this scaffold (XOR with nginx_cache_sync_enabled).
-# Robot creds live in atlas-infra-edge.secrets.yml when a layer is enabled.
+# OCI seed (role 14-infra-cache-seed). Off: XOR load vs nginx_cache_sync_enabled.
+# Publish packs /opt caches into an external-registry image; not a catalog slot.
+# Robot creds: atlas-infra-edge.secrets.yml. Tag must not be latest.
 infra_cache_seed_publish_enabled: false
-infra_cache_seed_publish_image: ""
-infra_cache_seed_publish_tag: ""
+infra_cache_seed_publish_image: "example.com/library/atlas-seed-cache"
+infra_cache_seed_publish_tag: "23-08-2026"
 infra_cache_seed_publish_include:
   registry: true
   helm_repo: true
   pkg_repo: true
   custom_www: true
-infra_cache_seed_load_enabled: false
-infra_cache_seed_load_image: ""
-infra_cache_seed_load_tag: ""
+infra_cache_seed_load_enabled: true
+infra_cache_seed_load_image: "example.com/library/atlas-seed-cache"
+infra_cache_seed_load_tag: "23-08-2026"
 infra_cache_seed_load_include:
   registry: true
   helm_repo: true
@@ -926,8 +970,8 @@ infra_cache_seed_load_skip_if_same_digest: true
 infra_cache_seed_load_stamp_path: "{{ infra_bootstrap_repo_state_dir | default('/var/lib/atlas-infra') }}/cache-seed.stamp"
 infra_cache_seed_nginx_uid: 101
 infra_cache_seed_nginx_gid: 101
-infra_cache_seed_registry_tls_ca_enabled: false
-infra_cache_seed_registry_tls_ca_src: ""
+infra_cache_seed_registry_tls_ca_enabled: true
+infra_cache_seed_registry_tls_ca_src: "https://ca.example.com:8443/roots.pem"
 infra_cache_seed_registry_tls_ca_dir: ""
 infra_cache_seed_registry_tls_ca_validate_certs: false
 

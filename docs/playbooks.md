@@ -56,7 +56,7 @@ playbooks:
 playbooks:
   atlas-k8s-core:
     source: git
-    url: git@gitea.example.com:org/atlas-k8s-core.git
+    url: git@github.com:yokozu777/atlas-k8s-core.git
     ref: main          # prefer pin SHA/tag for prod
     layout: roles/
     shallow: true

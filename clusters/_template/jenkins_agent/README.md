@@ -29,7 +29,7 @@ Leaf DNS: `--dns-suffix` sets the shared suffix; `cluster_domain` keeps the
 
 ## Reference
 
-After init: `./cluster use <your-id>` (local org labs under `clusters/ci/` are optional / gitignored)  
+After init: `./cluster use <your-id>` (local org labs under `clusters/ci/` are optional / private inventory)  
 Sibling product docs: `atlas-jenkins-agent` README (standalone `./run.sh`).
 
 Regenerate this scaffold from a lab (maintainer; scrub hostnames/secrets after):

@@ -1,9 +1,17 @@
 # Public scaffold ``_template/infra_edge`` (exported from ``dev/infra``).
-# Orchestration contract: docs/stacks/infra-edge.md
 # Regenerate: python3 -m clusterctl.tools.export_template --from dev/infra --template infra_edge --flatten-cascade
 # Init: ./cluster init <env>/<name> --template infra_edge
 #
 # Scrub live hostnames / secrets before committing the public template.
+
+# Reference deployable infra-edge lab.
+# Phases: provision → init-infra → infra → init-infra-post (golden templates: lab/pve-templates)
+# Copy scaffold: ./cluster init <id> --template infra_edge
+# Orchestration contract: docs/stacks/infra-edge.md
+# Does not replace / delete infra inside dev/k8s; this leaf owns the shared infra VM.
+# infra compose cold path (Phase 3–6): compose_render → compose_pull → compose_start_core
+#   → 11_sync_infra_cache_pull,14_infra_cache_seed_load → compose_start_registry → compose_reconcile → 11_sync_infra_cache_push
+# Phase 6: docker baseline is one comma-union invocation (bootstrap+engine+daemon).
 
 schema_version: 2
 id: ''
@@ -14,7 +22,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-compute-provision.git
+    url: git@github.com:yokozu777/atlas-compute-provision.git
     ref: main
     entries:
       templates:
@@ -54,9 +62,10 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-node-foundation.git
+    url: git@github.com:yokozu777/atlas-node-foundation.git
     ref: main
     entries:
+      # Short OS bootstrap before BIND/CA exist (no DNS rewrite / apt / CA download).
       init-infra:
         file: playbooks/init_nodes.yaml
         invocations:
@@ -77,7 +86,9 @@ playbooks:
         when:
           inventory_groups_any:
           - infra_platform
-          vars: null
+          vars:
+
+      # After atlas-infra-edge/infra: DNS→BIND, apt, trust CA, repos, timezone, reboot.
       init-infra-post:
         file: playbooks/init_nodes.yaml
         invocations:
@@ -104,7 +115,8 @@ playbooks:
         when:
           inventory_groups_any:
           - infra_platform
-          vars: null
+          vars:
+
     path: atlas-node-foundation
     path_relative_to: sibling
   atlas-infra-edge:
@@ -112,7 +124,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-infra-edge.git
+    url: git@github.com:yokozu777/atlas-infra-edge.git
     ref: main
     entries:
       infra:
@@ -120,6 +132,7 @@ playbooks:
         invocations:
         - tags: 00_ensure_workspace
         - tags: 01_validate_vars
+        # Phase 6: one ansible-playbook invocation for docker baseline (bootstrap gated in-role).
         - tags: 00_bootstrap_infra_repos,01_install_docker_engine,02_configure_docker_daemon
           limit: infra_platform
         - tags: compose_render
@@ -150,8 +163,8 @@ phases:
 - infra: atlas-infra-edge/infra
 - init-infra-post: atlas-node-foundation/init-infra-post
 execution:
-  mode: local
+  mode: docker
   image: yokozu/krang
-  tag: '336'
+  tag: latest
 cluster_id_aliases: {}
 inventory: hosts

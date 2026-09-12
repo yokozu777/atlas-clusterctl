@@ -251,7 +251,7 @@ python3 -m clusterctl.tools.export_template --from <lab-id> --template k8s_full
 | Secrets / FQDN / PVE / live hosts | Inventory only (`atlas-*.secrets.yml` + Vault, `hosts`) | Never copy live values into `_template/` |
 | Promote lab → public scaffold | `python3 -m clusterctl.tools.export_template --from <lab-id> --template <name>` | DNS scrub automatic; `*.secrets.yml` keys kept, **values emptied**; still **scrub** hostnames / images before commit |
 
-**Known `--template` names:** `k8s_full`, `infra_edge`, `jenkins_agent`, `gitlab_runner`, `postgresql`, `redis`, `kafka`, `pve_templates`.
+**Known `--template` names:** `k8s_full`, `infra_edge`, `jenkins_agent`, `gitlab_runner`, `postgresql`, `redis`, `kafka`, `pve_templates`, `default` (env-policy overlay, not a stack).
 
 **Audience:** `export_template` is maintainer-only. Operators use
 `./cluster init … --template <name>` (opposite direction).

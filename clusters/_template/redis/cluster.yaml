@@ -4,16 +4,21 @@
 #
 # Scrub live hostnames / secrets before committing the public template.
 
+# Reference deployable Redis Cluster HA — provision → init → redis (golden templates: lab/pve-templates).
+# Copy scaffold: ./cluster init <id> --template redis
+# Does not touch dev/k8s or k8s stacks.
+
 schema_version: 2
 id: ''
 display_name: null
 playbooks:
   atlas-compute-provision:
+    # Git remotes for Jenkins repos sync (parity with ci/jenkins / ci/kafka).
     source: local
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-compute-provision.git
+    url: git@github.com:yokozu777/atlas-compute-provision.git
     ref: main
     entries:
       templates:
@@ -53,7 +58,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-node-foundation.git
+    url: git@github.com:yokozu777/atlas-node-foundation.git
     ref: main
     entries:
       init:
@@ -104,7 +109,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-redis.git
+    url: git@github.com:yokozu777/atlas-redis.git
     ref: main
     entries:
       cluster:
@@ -136,8 +141,8 @@ phases:
 - init: atlas-node-foundation/init
 - redis: atlas-redis/cluster
 execution:
-  mode: local
+  mode: docker
   image: yokozu/krang
-  tag: '336'
+  tag: latest
 cluster_id_aliases: {}
 inventory: hosts

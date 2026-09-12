@@ -45,7 +45,7 @@ python3 -m clusterctl.tools.export_template \
 
 | Flag | Meaning |
 |------|---------|
-| `--from` | Source cluster id under inventory/product `clusters/` (e.g. `ci/redis`, `dev/mxhash`) |
+| `--from` | Source cluster id under inventory/product `clusters/` (e.g. `ci/redis`, `dev/k8s`) |
 | `--template` | Destination scaffold name under `clusters/_template/<name>/` |
 | `--source-root` | Optional override for inventory `clusters/` |
 | `--target-root` | Optional override for product `clusters/` (receives `_template/`) |
@@ -56,9 +56,14 @@ inside a single tree. There is no `--clusters-root` alias (removed in Phase 4).
 ### Copy + scrub contract (same for every template)
 
 1. Require source `cluster.yaml`.
-2. Copy runtime: `hosts`, `group_vars`, `pub_keys` (including `*.secrets.yml`).
-3. Write `cluster.yaml` with `id: ""`, `display_name: null`, drop `deployable`;
-   neutral header (no lab-specific names).
+2. Copy the **full leaf tree** (not only `hosts` / `group_vars` / `pub_keys`).
+   Keep an existing non-empty public `README.md`. Optional `--flatten-cascade`
+   merges org→env→leaf `group_vars/all` by top-level YAML blocks (comments travel
+   with the winning block).
+3. Write `cluster.yaml` as source text plus a header (`id: ""`, `display_name: null`,
+   drop `deployable`; playbook `url:` → `git@github.com:yokozu777/<repo>.git`;
+   neutralize execution image). Parent
+   `_template/` (nameless `--template`) is out of scope for export.
 4. Leaf DNS scrub via `scrub_leaf_dns_suffix_for_public_template`:
    - `dns_domain_suffix` → `example.com`
    - literal `cluster_domain` FQDNs → `"<prefix>.{{ dns_domain_suffix }}"`
@@ -66,7 +71,8 @@ inside a single tree. There is no `--clusters-root` alias (removed in Phase 4).
    - keep keys / structure in `*.secrets.yml` and legacy `secrets.yml`
    - replace every leaf scalar value with `""` (Ansible Vault payloads → empty stub)
 6. Delete legacy `group_vars/all/cluster.yml` when present.
-7. **No** lab-specific README string rewrites.
+7. Org FQDN / leftover lab-token scrub (`example.com`); do not overwrite a
+   non-empty public README.
 
 Manual scrub of live hostnames / images remains an operator checklist item
 ([local-labs.md](../local-labs.md)).
@@ -75,16 +81,19 @@ Manual scrub of live hostnames / images remains an operator checklist item
 
 | `--template` | Typical `--from` (example lab) | Notes |
 |--------------|--------------------------------|-------|
-| `k8s_full` | `dev/mxhash` | full k8s without embedded infra |
-| `infra_edge` | `ci/infra` | infra platform leaf |
-| `jenkins_agent` | `ci/jenkins` | Jenkins agents |
-| `postgresql` | `ci/postgresql` | PostgreSQL HA |
-| `redis` | `ci/redis` | Redis Cluster HA |
-| `kafka` | `ci/kafka` | Kafka KRaft HA |
-| `pve_templates` | `lab/pve-templates` | golden PVE templates (build-only) |
+| `k8s_full` | `dev/k8s` | full k8s without embedded infra |
+| `infra_edge` | `dev/infra` | infra platform leaf |
+| `jenkins_agent` | `dev/jenkins` | Jenkins agents |
+| `gitlab_runner` | `dev/gitlab` | GitLab runners |
+| `postgresql` | `dev/postgresql` | PostgreSQL HA |
+| `redis` | `dev/redis` | Redis Cluster HA |
+| `kafka` | `dev/kafka` | Kafka KRaft HA |
+| `pve_templates` | `dev/pve-templates` | golden PVE templates (build-only) |
+| `default` | `dev/default` | env-policy overlay (not a stack) |
 
 Empty parent `_template/` (minimal scaffold for `--template` with no name) is
-**out of scope** for export (not a named stack scaffold).
+**out of scope** for export (not a named stack scaffold). Named `_template/default`
+is the env-policy fragment, distinct from `clusters/default/default/` (org baseline).
 
 There is **no** auto-mapping `ci/redis` → `redis`: both `--from` and `--template`
 are always explicit.

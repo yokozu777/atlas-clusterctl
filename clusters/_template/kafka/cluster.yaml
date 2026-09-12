@@ -4,6 +4,10 @@
 #
 # Scrub live hostnames / secrets before committing the public template.
 
+# Reference deployable Kafka KRaft HA — provision → init → kafka cluster.
+# Copy scaffold: ./cluster init <id> --template kafka
+# Scheme B: dedicated controllers + brokers. No ZooKeeper. No L4 VIP.
+
 schema_version: 2
 id: ''
 display_name: null
@@ -13,7 +17,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-compute-provision.git
+    url: git@github.com:yokozu777/atlas-compute-provision.git
     ref: main
     entries:
       templates:
@@ -53,7 +57,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-node-foundation.git
+    url: git@github.com:yokozu777/atlas-node-foundation.git
     ref: main
     entries:
       init:
@@ -102,7 +106,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-kafka.git
+    url: git@github.com:yokozu777/atlas-kafka.git
     ref: main
     entries:
       cluster:
@@ -130,8 +134,8 @@ phases:
 - init: atlas-node-foundation/init
 - kafka: atlas-kafka/cluster
 execution:
-  mode: local
+  mode: docker
   image: yokozu/krang
-  tag: '336'
+  tag: latest
 cluster_id_aliases: {}
 inventory: hosts

@@ -37,7 +37,7 @@ Then:
    `atlas-compute-provision.secrets.yml`, `atlas-node-foundation.secrets.yml`,
    `atlas-k8s-core.secrets.yml`, `atlas-k8s-addons.secrets.yml`.
 4. Set `dns_server_ip` / NTP / DNS to your infra_edge (or lab) BIND.
-5. Set `execution.image` / `execution.tag` if needed (default: [`yokozu/krang:336`](https://hub.docker.com/r/yokozu/krang) — build from [infrastructure-automation-toolkit](https://github.com/yokozu777/infrastructure-automation-toolkit)).
+5. Set `execution.image` / `execution.tag` if needed (default: [`yokozu/krang:latest`](https://hub.docker.com/r/yokozu/krang) — build from [infrastructure-automation-toolkit](https://github.com/yokozu777/infrastructure-automation-toolkit)).
 6. Point playbook `url:` entries at your remotes (or keep `source: local` siblings).
 
 ## Runtime cascade
@@ -47,7 +47,7 @@ unless the leaf replaces sections explicitly.
 
 ## Local labs
 
-Org reference labs under `clusters/ci/` and `clusters/dev/` are **local-only** (gitignored).
+Org reference labs under `clusters/ci/` and `clusters/dev/` are **local-only** (private inventory).
 Some labs may still embed infra in one leaf for convenience; the public template does not.
 Do not re-export a private lab into this public template without scrubbing hostnames and secrets.
 See [`SECURITY.md`](../../../SECURITY.md) and [ADR 004](../../../docs/adr/004-universal-export-template.md).

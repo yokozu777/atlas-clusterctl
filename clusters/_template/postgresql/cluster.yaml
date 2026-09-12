@@ -4,6 +4,12 @@
 #
 # Scrub live hostnames / secrets before committing the public template.
 
+# Reference deployable PostgreSQL HA cluster — provision → init → postgresql.
+# Golden PVE templates: lab/pve-templates (Phase 3 pilot — clone ubuntu/oracle/debian-base).
+# Build images here only in emergency (needs image_url); normal path skips templates phase.
+# Copy scaffold: ./cluster init <id> --template postgresql
+# Does not touch dev/k8s or k8s stacks.
+
 schema_version: 2
 id: ''
 display_name: null
@@ -13,7 +19,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-compute-provision.git
+    url: git@github.com:yokozu777/atlas-compute-provision.git
     ref: main
     entries:
       templates:
@@ -53,7 +59,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-node-foundation.git
+    url: git@github.com:yokozu777/atlas-node-foundation.git
     ref: main
     entries:
       init:
@@ -103,7 +109,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: never
-    url: git@example.com:org/atlas-postgresql.git
+    url: git@github.com:yokozu777/atlas-postgresql.git
     ref: main
     entries:
       cluster:
@@ -132,8 +138,8 @@ phases:
 - init: atlas-node-foundation/init
 - postgresql: atlas-postgresql/cluster
 execution:
-  mode: local
+  mode: docker
   image: yokozu/krang
-  tag: '336'
+  tag: latest
 cluster_id_aliases: {}
 inventory: hosts

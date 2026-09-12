@@ -38,7 +38,7 @@ PUBLIC_KAFKA_TEMPLATE = ROOT / "clusters" / "_template" / "kafka"
 
 # Full k8s playbooks/phases invocation count — public ``_template/k8s_full``
 # and any discovered k8s lab (provision + init + core + addons).
-FULL_K8S_INVOCATION_COUNT = 95
+FULL_K8S_INVOCATION_COUNT = 105
 
 _PKG_REPOS_KEY_RE = re.compile(r"(?m)^pkg_repos(_extra)?:\s")
 _CLUSTER_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*/[a-z0-9][a-z0-9_-]*$")

@@ -1,20 +1,8 @@
-###############################################################################
-# Cluster leaf: dev/postgresql — atlas-node-foundation overlay
-# -----------------------------------------------------------------------------
-# Purpose : OS bootstrap for pgsql_* (init)
-# Defaults: sibling atlas-node-foundation group_vars/all/atlas-node-foundation.yml (+ roles/*/defaults)
-# Docs    : docs/stacks/postgresql.md
-#           Must cover the same inventory groups as atlas-postgresql limits.
-#
-# Prefer atlas-node-foundation.secrets.yml (or Vault) for passwords.
-###############################################################################
+# ============================================
+# Variables for role 00_init
+# ============================================
 
-# =============================================================================
-# Targeting
-# =============================================================================
-
-# Leaf DNS identity
-# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+# Canonical admin/SSH user alias (ansible_user / initial_user / system_user derive from this)
 admin_user: localuser
 
 # Connection user (set here so connection uses it from the start)
@@ -443,16 +431,7 @@ pkg_repos:
     enabled: true
     uri: "{{ 'OL10_developer_EPEL' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}"
 
-# =============================================================================
-# Package repos extras (concat onto env default pkg_repos in 13_configure_repo)
-# =============================================================================
-pkg_repos_extra:
-  - name: pgdg-apt
-    enabled: true
-    uri: "{{ 'pgdg-apt' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}"
-  - name: pgdg-yum
-    enabled: true
-    uri: "{{ 'pgdg-yum' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}"
+pkg_repos_extra: []
 
 # APT Acquire::By-Hash (typical when uri points at nginx pkg-repo mirrors)
 pkg_repo_apt_acquire_by_hash: true
@@ -557,7 +536,3 @@ update_schedule_time: "03:00"
 # Reboot system after configuration
 # Default: false (system not rebooted)
 reboot_system: true
-dns_domain_suffix: example.com
-cluster_domain: "pgsql.{{ dns_domain_suffix }}"
-
-node_foundation_init_hosts: "pgsql_etcd_cluster:pgsql_cluster:pgsql_lbs"

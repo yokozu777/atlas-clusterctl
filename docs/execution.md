@@ -11,7 +11,7 @@ Default controller image for `--executor docker`:
 | **Pull** | [`yokozu/krang:336`](https://hub.docker.com/r/yokozu/krang) |
 | **Build** | [yokozu777/infrastructure-automation-toolkit](https://github.com/yokozu777/infrastructure-automation-toolkit) |
 
-Templates ship `execution.image: yokozu/krang` and `execution.tag: "336"`. Override per cluster or via `EXECUTION_DOCKER_IMAGE` / `EXECUTION_DOCKER_TAG`.
+Templates ship `execution.image: yokozu/krang` and `execution.tag: latest`. Override per cluster or via `EXECUTION_DOCKER_IMAGE` / `EXECUTION_DOCKER_TAG`.
 
 ## cluster.yaml
 

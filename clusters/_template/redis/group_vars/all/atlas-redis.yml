@@ -5,6 +5,7 @@
 
 # Leaf DNS identity
 # (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+# Orchestration contract: docs/stacks/redis.md
 dns_domain_suffix: example.com
 cluster_domain: "redis.{{ dns_domain_suffix }}"
 

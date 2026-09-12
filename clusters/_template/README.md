@@ -16,6 +16,7 @@ Neutral placeholders (`example.com`, `CHANGEME`) — not live org labs.
 | `_template/redis/` | Redis Cluster HA (`--template redis`) — [docs/stacks/redis.md](../../docs/stacks/redis.md) |
 | `_template/kafka/` | Kafka KRaft HA (`--template kafka`) — [docs/stacks/kafka.md](../../docs/stacks/kafka.md) |
 | `_template/pve_templates/` | Golden PVE templates build-only (`--template pve_templates`) — [docs/stacks/compute-provision.md](../../docs/stacks/compute-provision.md) |
+| `_template/default/` | Env-policy overlay (`--template default`) — not a stack; distinct from `_template/` and `clusters/default/default/` |
 
 Stack leaves set `hosts.provision.clone` to golden names (`ubuntu-base` /
 `oracle-base` / `debian-base`); they do **not** carry `provision_pve_templates`.

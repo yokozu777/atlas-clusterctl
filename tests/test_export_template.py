@@ -167,6 +167,95 @@ class ExportTemplateMultiStackTest(unittest.TestCase):
             self.assertIn('cluster_domain: "redis.{{ dns_domain_suffix }}"', text)
             self.assertNotIn("redis.live.com", text)
 
+    def test_rewrites_playbook_urls_to_github_role_repos(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_root = root / "inventory"
+            target_root = root / "product"
+            lab = source_root / "fixture" / "redis"
+            _seed_leaf(lab, overlay_name="atlas-redis.yml", domain_prefix="redis")
+            _write(
+                lab / "cluster.yaml",
+                "schema_version: 2\nid: lab\nplaybooks:\n"
+                "  atlas-redis:\n"
+                "    source: git\n"
+                "    sync: always\n"
+                "    url: git@gitea.example.com:root/atlas-redis.git\n"
+                "    ref: main\n"
+                "phases:\n  phases: []\n",
+            )
+            target = export_template(
+                source_id="fixture/redis",
+                template_name="redis",
+                source_root=source_root,
+                target_root=target_root,
+            )
+            text = (target / "cluster.yaml").read_text(encoding="utf-8")
+            self.assertIn(
+                "url: git@github.com:yokozu777/atlas-redis.git",
+                text,
+            )
+            self.assertNotIn("gitea.example.com", text)
+            self.assertNotIn("git@example.com:org/", text)
+
+    def test_rewrites_execution_to_docker_latest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_root = root / "inventory"
+            target_root = root / "product"
+            lab = source_root / "fixture" / "redis"
+            _seed_leaf(lab, overlay_name="atlas-redis.yml", domain_prefix="redis")
+            _write(
+                lab / "cluster.yaml",
+                "schema_version: 2\nid: lab\nplaybooks: {}\n"
+                "execution:\n  mode: local\n"
+                "  image: harbor.example.com/library/krang\n"
+                "  tag: '337'\n",
+            )
+            target = export_template(
+                source_id="fixture/redis",
+                template_name="redis",
+                source_root=source_root,
+                target_root=target_root,
+            )
+            text = (target / "cluster.yaml").read_text(encoding="utf-8")
+            self.assertIn("mode: docker", text)
+            self.assertIn("image: yokozu/krang", text)
+            self.assertIn("tag: latest", text)
+            self.assertNotIn("mode: local", text)
+            self.assertNotIn("337", text)
+
+    def test_public_templates_execution_is_docker_latest(self) -> None:
+        root = Path(__file__).resolve().parents[1] / "clusters" / "_template"
+        paths = [root / "cluster.yaml", *sorted(root.glob("*/cluster.yaml"))]
+        checked = 0
+        for path in paths:
+            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+            execution = data.get("execution")
+            if not isinstance(execution, dict):
+                continue
+            checked += 1
+            self.assertEqual(execution.get("mode"), "docker", path)
+            self.assertEqual(execution.get("image"), "yokozu/krang", path)
+            self.assertEqual(str(execution.get("tag")), "latest", path)
+        self.assertGreater(checked, 0)
+
+    def test_public_templates_playbook_urls_are_github(self) -> None:
+        root = Path(__file__).resolve().parents[1] / "clusters" / "_template"
+        found = 0
+        for path in sorted(root.glob("*/cluster.yaml")):
+            for line in path.read_text(encoding="utf-8").splitlines():
+                stripped = line.strip()
+                if not stripped.startswith("url:"):
+                    continue
+                found += 1
+                self.assertTrue(
+                    stripped.startswith("url: git@github.com:yokozu777/atlas-"),
+                    f"{path.parent.name}: {stripped}",
+                )
+                self.assertTrue(stripped.endswith(".git"), stripped)
+        self.assertGreater(found, 0)
+
     def test_missing_source_mentions_source_root(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -191,7 +280,7 @@ class ExportTemplateMultiStackTest(unittest.TestCase):
                 )
 
     def test_does_not_copy_or_rewrite_readme(self) -> None:
-        """Runtime copy is hosts/group_vars/pub_keys only — README stays template-owned."""
+        """Existing public README is not overwritten by a lab README."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             source_root = root / "inventory"
@@ -214,6 +303,51 @@ class ExportTemplateMultiStackTest(unittest.TestCase):
                 "public scaffold readme",
             )
             self.assertNotIn("LIVE", (target / "README.md").read_text(encoding="utf-8"))
+
+
+    def test_copies_extra_leaf_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_root = root / "inventory"
+            target_root = root / "product"
+            lab = source_root / "fixture" / "redis"
+            _seed_leaf(lab, overlay_name="atlas-redis.yml", domain_prefix="redis")
+            _write(lab / "host_vars" / "node1.yml", "# extra\nansible_user: root\n")
+            target = export_template(
+                source_id="fixture/redis",
+                template_name="redis",
+                source_root=source_root,
+                target_root=target_root,
+            )
+            extra = (target / "host_vars" / "node1.yml").read_text(encoding="utf-8")
+            self.assertIn("# extra", extra)
+            self.assertIn("ansible_user: root", extra)
+
+    def test_copies_lab_readme_when_template_has_none(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_root = root / "inventory"
+            target_root = root / "product"
+            lab = source_root / "fixture" / "default"
+            _write(
+                lab / "cluster.yaml",
+                "schema_version: 2\nid: fixture/default\nplaybooks: {}\n",
+            )
+            _write(
+                lab / "README.md",
+                "> **Local-only lab** (gitignored — not in the public tree).\n\n"
+                "# Env policy\n",
+            )
+            target = export_template(
+                source_id="fixture/default",
+                template_name="default",
+                source_root=source_root,
+                target_root=target_root,
+            )
+            text = (target / "README.md").read_text(encoding="utf-8")
+            self.assertIn("# Env policy", text)
+            self.assertNotIn("Local-only lab", text)
+            self.assertNotIn("gitignored", text)
 
 
 class ExportTemplateSecretsScrubTest(unittest.TestCase):
@@ -254,6 +388,21 @@ class ExportTemplateSecretsScrubTest(unittest.TestCase):
             self.assertNotIn("6666666666666666", text)
             self.assertFalse(scrub_secrets_overlay_file(path))
 
+    def test_preserves_comments_when_emptying_scalars(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "atlas-x.secrets.yml"
+            path.write_text(
+                "# keep this banner\nvip_auth_pass: LIVE\n"
+                "nested:\n  # inner\n  token: ALSO\n",
+                encoding="utf-8",
+            )
+            self.assertTrue(scrub_secrets_overlay_file(path))
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("# keep this banner", text)
+            self.assertIn("# inner", text)
+            data = yaml.safe_load(text)
+            self.assertEqual(data, {"vip_auth_pass": "", "nested": {"token": ""}})
+
 
 class ExportTemplateFlattenCascadeTest(unittest.TestCase):
     def test_flatten_merges_env_default_and_scrubs_hosts(self) -> None:
@@ -265,6 +414,7 @@ class ExportTemplateFlattenCascadeTest(unittest.TestCase):
             lab = source_root / "fixture" / "redis"
             _write(
                 env_default / "group_vars" / "all" / "atlas-node-foundation.yml",
+                "# env section banner\n"
                 "dns_domain_suffix: live.lab\n"
                 "admin_user: localuser\n"
                 'pki_ca_url:\n  - "https://ca.dev-mxhash.com:8443/roots.pem"\n',
@@ -324,6 +474,49 @@ class ExportTemplateFlattenCascadeTest(unittest.TestCase):
             self.assertTrue((target / "group_vars" / "proxmox.yml").is_file())
             header = (target / "cluster.yaml").read_text(encoding="utf-8")
             self.assertIn("--flatten-cascade", header)
+            foundation_text = (
+                target / "group_vars" / "all" / "atlas-node-foundation.yml"
+            ).read_text(encoding="utf-8")
+            self.assertIn("# env section banner", foundation_text)
+            self.assertNotIn("mxhash", foundation_text.lower())
+
+    def test_scrubs_remaining_org_tokens_and_injects_stack_docs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_root = root / "inventory"
+            target_root = root / "product"
+            lab = source_root / "fixture" / "infra"
+            _seed_leaf(
+                lab,
+                overlay_name="atlas-infra-edge.yml",
+                domain_prefix="infra",
+            )
+            _write(
+                lab / "group_vars" / "all" / "atlas-infra-edge.yml",
+                "stepca_init_name: Mxhash Internal CA\n"
+                "dns_domain_suffix: live.lab\n"
+                'cluster_domain: "infra.{{ dns_domain_suffix }}"\n',
+            )
+            _write(
+                lab / "group_vars" / "all" / "atlas-k8s-addons.yml",
+                "# atlas-k8s-addons vars\nhelm_version: x\n",
+            )
+            target = export_template(
+                source_id="fixture/infra",
+                template_name="infra_edge",
+                source_root=source_root,
+                target_root=target_root,
+            )
+            infra = (
+                target / "group_vars" / "all" / "atlas-infra-edge.yml"
+            ).read_text(encoding="utf-8")
+            self.assertNotIn("mxhash", infra.lower())
+            self.assertIn("Example Internal CA", infra)
+            self.assertIn("docs/stacks/infra-edge.md", infra)
+            addons = (
+                target / "group_vars" / "all" / "atlas-k8s-addons.yml"
+            ).read_text(encoding="utf-8")
+            self.assertIn("docs/stacks/k8s-addons.md", addons)
 
 
 class ExportTemplateCliTest(unittest.TestCase):
