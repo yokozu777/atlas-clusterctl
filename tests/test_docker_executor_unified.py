@@ -20,8 +20,10 @@ from clusterctl.docker_executor import (
     _ownership_fix_paths,
     build_docker_mounts,
     build_docker_run_command,
+    docker_bind_source,
     docker_ssh_staging_parent,
     fix_bind_mount_ownership,
+    normalize_docker_host_source,
     prepare_container_ssh_key,
     preflight_docker,
     run_docker_container,
@@ -39,6 +41,10 @@ class DockerExecutorUnifiedTest(unittest.TestCase):
     _ISOLATED_ENV_KEYS = (
         "ATLAS_CLUSTER_ROOT",
         "ATLAS_CLUSTERS_ROOT",
+        "ATLAS_WORKSPACE_ROOT",
+        "ATLAS_CLUSTER_ROOT_HOST",
+        "ATLAS_CLUSTERS_ROOT_HOST",
+        "ATLAS_WORKSPACE_ROOT_HOST",
         "CLUSTER_ID",
         # run_ci.sh points this at an empty file; fixtures use .config/config.yaml.
         "ATLAS_CLUSTERCTL_CONFIG",
@@ -481,6 +487,55 @@ class DockerExecutorUnifiedTest(unittest.TestCase):
         finally:
             prepared.cleanup()
 
+    def test_build_docker_mounts_rewrites_host_bind_source(self) -> None:
+        self._seed_v2_docker_cluster()
+        host_ctl = "/run/desktop/mnt/host/c/Users/me/atlas-clusterctl"
+        os.environ["ATLAS_CLUSTER_ROOT_HOST"] = host_ctl
+        ssh = self.root / "id_rsa"
+        ssh.write_text("stub\n", encoding="utf-8")
+        os.environ["SSH_KEY"] = str(ssh)
+        ctx = ClusterContext.load(cluster_id="lab/docker")
+        prepared = prepare_container_ssh_key(
+            ssh, staging_parent=docker_ssh_staging_parent(ctx.workspace_root)
+        )
+        try:
+            with mock.patch(
+                "clusterctl.docker_executor.load_self_bind_mounts",
+                return_value=[],
+            ):
+                mounts = build_docker_mounts(ctx, ssh_key_host=prepared.key_path)
+            mount_text = " ".join(mounts)
+            self.assertIn(f"{host_ctl}:{self.root.resolve()}:rw", mount_text)
+            rel = prepared.key_path.resolve().relative_to(self.root.resolve())
+            expected_key = host_ctl + "/" + rel.as_posix()
+            self.assertIn(f"{expected_key}:{CONTAINER_SSH_KEY}:ro", mount_text)
+            self.assertNotIn(f"{self.root.resolve()}:{self.root.resolve()}:rw", mount_text)
+        finally:
+            prepared.cleanup()
+
+    def test_build_docker_mounts_inspect_source_beats_env_host(self) -> None:
+        self._seed_v2_docker_cluster()
+        os.environ["ATLAS_CLUSTER_ROOT_HOST"] = "/from-env-host"
+        inspect_src = "/run/desktop/mnt/host/c/Users/me/ctl"
+        ssh = self.root / "id_rsa"
+        ssh.write_text("stub\n", encoding="utf-8")
+        os.environ["SSH_KEY"] = str(ssh)
+        ctx = ClusterContext.load(cluster_id="lab/docker")
+        prepared = prepare_container_ssh_key(
+            ssh, staging_parent=docker_ssh_staging_parent(ctx.workspace_root)
+        )
+        try:
+            with mock.patch(
+                "clusterctl.docker_executor.load_self_bind_mounts",
+                return_value=[(str(self.root.resolve()), inspect_src)],
+            ):
+                mounts = build_docker_mounts(ctx, ssh_key_host=prepared.key_path)
+            mount_text = " ".join(mounts)
+            self.assertIn(f"{inspect_src}:{self.root.resolve()}:rw", mount_text)
+            self.assertNotIn("/from-env-host:", mount_text)
+        finally:
+            prepared.cleanup()
+
     @mock.patch("clusterctl.docker_executor.check_ssh_key", return_value=None)
     @mock.patch("clusterctl.docker_executor.docker_cli_available", return_value=True)
     def test_preflight_docker_rejects_v1_without_phase_runner(
@@ -492,6 +547,74 @@ class DockerExecutorUnifiedTest(unittest.TestCase):
         with self.assertRaises(ClusterctlError) as raised:
             preflight_docker(ctx)
         self.assertIn("schema v2 playbooks + phases", str(raised.exception))
+
+
+class DockerBindSourceTest(unittest.TestCase):
+    _KEYS = (
+        "ATLAS_CLUSTER_ROOT",
+        "ATLAS_CLUSTERS_ROOT",
+        "ATLAS_WORKSPACE_ROOT",
+        "ATLAS_CLUSTER_ROOT_HOST",
+        "ATLAS_CLUSTERS_ROOT_HOST",
+        "ATLAS_WORKSPACE_ROOT_HOST",
+    )
+
+    def setUp(self) -> None:
+        self._saved = {key: os.environ.get(key) for key in self._KEYS}
+        for key in self._KEYS:
+            os.environ.pop(key, None)
+
+    def tearDown(self) -> None:
+        for key, value in self._saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    def test_normalize_windows_drive_to_desktop_mnt(self) -> None:
+        self.assertEqual(
+            normalize_docker_host_source(r"C:\Users\me\atlas-clusterctl"),
+            "/run/desktop/mnt/host/c/Users/me/atlas-clusterctl",
+        )
+        self.assertEqual(
+            normalize_docker_host_source("C:/Users/me/atlas-clusterctl"),
+            "/run/desktop/mnt/host/c/Users/me/atlas-clusterctl",
+        )
+        self.assertEqual(
+            normalize_docker_host_source("/home/me/atlas-clusterctl"),
+            "/home/me/atlas-clusterctl",
+        )
+
+    def test_one_to_one_without_host_env(self) -> None:
+        path = Path("/tmp/atlas-bind-source-one-to-one")
+        self.assertEqual(
+            docker_bind_source(path, mounts=[]),
+            str(path.resolve()),
+        )
+
+    def test_env_host_prefix_rewrite(self) -> None:
+        os.environ["ATLAS_CLUSTER_ROOT"] = "/atlas/clusterctl"
+        os.environ["ATLAS_CLUSTER_ROOT_HOST"] = r"C:\Users\me\atlas-clusterctl"
+        self.assertEqual(
+            docker_bind_source(Path("/atlas/clusterctl"), mounts=[]),
+            "/run/desktop/mnt/host/c/Users/me/atlas-clusterctl",
+        )
+        self.assertEqual(
+            docker_bind_source(Path("/atlas/clusterctl/clusterctl"), mounts=[]),
+            "/run/desktop/mnt/host/c/Users/me/atlas-clusterctl/clusterctl",
+        )
+
+    def test_inspect_mounts_rewrite(self) -> None:
+        mounts = [("/atlas/workspace", "/host/inventory/workspace")]
+        os.environ["ATLAS_WORKSPACE_ROOT"] = "/atlas/workspace"
+        os.environ["ATLAS_WORKSPACE_ROOT_HOST"] = "/from-env"
+        self.assertEqual(
+            docker_bind_source(
+                Path("/atlas/workspace/dev-k8s/.atlas-ssh/key"),
+                mounts=mounts,
+            ),
+            "/host/inventory/workspace/dev-k8s/.atlas-ssh/key",
+        )
 
 
 if __name__ == "__main__":

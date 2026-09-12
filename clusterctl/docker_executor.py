@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -80,6 +82,17 @@ CONTAINER_HOME = "/tmp/clusterctl-home"
 CONTAINER_NSS_WRAPPER_SO = "/usr/lib/libnss_wrapper.so"
 CONTAINER_NSS_USER = "clusterctl"
 ENV_EXECUTION_ID = "ATLAS_EXECUTION_ID"
+ENV_CLUSTER_ROOT_HOST = "ATLAS_CLUSTER_ROOT_HOST"
+ENV_CLUSTERS_ROOT_HOST = "ATLAS_CLUSTERS_ROOT_HOST"
+ENV_WORKSPACE_ROOT_HOST = "ATLAS_WORKSPACE_ROOT_HOST"
+
+# atlas-ui Compose POSIX targets. Used when *_HOST is set but ATLAS_*_ROOT is empty.
+_DEFAULT_CONTAINER_CLUSTER_ROOT = "/atlas/clusterctl"
+_DEFAULT_CONTAINER_CLUSTERS_ROOT = "/atlas/clusters"
+_DEFAULT_CONTAINER_WORKSPACE_ROOT = "/atlas/workspace"
+
+_WINDOWS_DRIVE_SOURCE = re.compile(r"^([A-Za-z]):[\\/](.*)$")
+_DOCKER_DESKTOP_HOST_PREFIX = "/run/desktop/mnt/host/"
 
 
 def docker_run_container_name(execution_id: str | None = None) -> str | None:
@@ -302,6 +315,163 @@ def _is_under(path: Path, root: Path) -> bool:
         return False
 
 
+def normalize_docker_host_source(source: str) -> str:
+    """Turn a Windows drive path into the Docker Desktop Linux VM bind source.
+
+    Linux ``docker`` talking to Desktop via ``/var/run/docker.sock`` accepts
+    ``/run/desktop/mnt/host/<drive>/...``, not ``C:\\Users\\...``. POSIX sources
+    are returned unchanged.
+    """
+    text = source.strip()
+    if not text:
+        return text
+    slash_form = text.replace("\\", "/")
+    if slash_form.startswith(_DOCKER_DESKTOP_HOST_PREFIX):
+        return slash_form
+    match = _WINDOWS_DRIVE_SOURCE.match(text) or _WINDOWS_DRIVE_SOURCE.match(slash_form)
+    if match is None:
+        return text
+    drive = match.group(1).lower()
+    rest = match.group(2).replace("\\", "/").lstrip("/")
+    return f"{_DOCKER_DESKTOP_HOST_PREFIX}{drive}/{rest}"
+
+
+def _join_bind_source(host_root: str, dest_root: Path, resolved: Path) -> str:
+    dest_res = dest_root.expanduser().resolve()
+    rel = resolved.relative_to(dest_res)
+    host_root = host_root.rstrip("/\\")
+    if not rel.parts:
+        return normalize_docker_host_source(host_root)
+    if _WINDOWS_DRIVE_SOURCE.match(host_root) or "\\" in host_root:
+        joined = host_root + "\\" + "\\".join(rel.parts)
+        return normalize_docker_host_source(joined)
+    return normalize_docker_host_source(host_root + "/" + "/".join(rel.parts))
+
+
+def _allowed_inspect_dest(dest: str) -> bool:
+    posix = dest.replace("\\", "/").rstrip("/") or "/"
+    if posix == "/atlas" or posix.startswith("/atlas/"):
+        return True
+    for key in ("ATLAS_CLUSTER_ROOT", ENV_CLUSTERS_ROOT, ENV_WORKSPACE_ROOT):
+        value = os.environ.get(key, "").strip().rstrip("/")
+        if value and posix == value.replace("\\", "/").rstrip("/"):
+            return True
+    return False
+
+
+def _docker_inspect_mounts(ref: str) -> list[tuple[str, str]] | None:
+    try:
+        result = subprocess.run(
+            ["docker", "inspect", "-f", "{{json .Mounts}}", ref],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    raw = (result.stdout or "").strip()
+    if not raw:
+        return None
+    try:
+        mounts = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(mounts, list):
+        return None
+    out: list[tuple[str, str]] = []
+    for item in mounts:
+        if not isinstance(item, dict):
+            continue
+        dest = str(item.get("Destination") or "").strip()
+        source = str(item.get("Source") or "").strip()
+        if not dest or not source:
+            continue
+        if not _allowed_inspect_dest(dest):
+            continue
+        out.append((dest, source))
+    return out
+
+
+def load_self_bind_mounts() -> list[tuple[str, str]]:
+    """Bind Destination→Source for this container (atlas-ui worker), if any."""
+    if not Path("/.dockerenv").is_file() and not Path("/run/.containerenv").is_file():
+        return []
+    if not docker_cli_available():
+        return []
+    refs: list[str] = []
+    hostname = os.environ.get("HOSTNAME", "").strip()
+    if hostname:
+        refs.append(hostname)
+    refs.append("atlas-ui-worker")
+    seen: set[str] = set()
+    for ref in refs:
+        if ref in seen:
+            continue
+        seen.add(ref)
+        mounts = _docker_inspect_mounts(ref)
+        if mounts:
+            return mounts
+    return []
+
+
+def _env_host_prefix_map() -> list[tuple[Path, str]]:
+    specs = (
+        ("ATLAS_CLUSTER_ROOT", ENV_CLUSTER_ROOT_HOST, _DEFAULT_CONTAINER_CLUSTER_ROOT),
+        (ENV_CLUSTERS_ROOT, ENV_CLUSTERS_ROOT_HOST, _DEFAULT_CONTAINER_CLUSTERS_ROOT),
+        (ENV_WORKSPACE_ROOT, ENV_WORKSPACE_ROOT_HOST, _DEFAULT_CONTAINER_WORKSPACE_ROOT),
+    )
+    out: list[tuple[Path, str]] = []
+    for root_key, host_key, default_dest in specs:
+        host = os.environ.get(host_key, "").strip()
+        if not host:
+            continue
+        dest = os.environ.get(root_key, "").strip() or default_dest
+        out.append((Path(dest), host))
+    out.sort(key=lambda item: len(item[0].parts), reverse=True)
+    return out
+
+
+def _longest_prefix_source(
+    resolved: Path,
+    prefixes: list[tuple[Path, str]],
+) -> str | None:
+    ranked: list[tuple[int, Path, str]] = []
+    for dest_root, host_root in prefixes:
+        dest_res = dest_root.expanduser().resolve()
+        if resolved == dest_res or _is_under(resolved, dest_root):
+            ranked.append((len(dest_res.parts), dest_root, host_root))
+    if not ranked:
+        return None
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    _, dest_root, host_root = ranked[0]
+    return _join_bind_source(host_root, dest_root, resolved)
+
+
+def docker_bind_source(
+    path: Path,
+    *,
+    mounts: list[tuple[str, str]] | None = None,
+) -> str:
+    """Daemon-side ``docker run -v`` source for a path as this process sees it.
+
+    Order: current-container inspect mounts, then ``ATLAS_*_ROOT_HOST``, then
+    1:1 (native host clusterctl).
+    """
+    resolved = path.expanduser().resolve()
+    mount_list = load_self_bind_mounts() if mounts is None else mounts
+    inspect_prefixes = [(Path(dest), source) for dest, source in mount_list]
+    found = _longest_prefix_source(resolved, inspect_prefixes)
+    if found is not None:
+        return found
+    found = _longest_prefix_source(resolved, _env_host_prefix_map())
+    if found is not None:
+        return found
+    return str(resolved)
+
+
 def external_config_bind_mount_roots(ctx: ClusterContext) -> list[Path]:
     """Host paths from ``.config`` / env that sit outside ``ATLAS_CLUSTER_ROOT``.
 
@@ -429,9 +599,11 @@ def fix_bind_mount_ownership(ctx: ClusterContext) -> None:
         return
 
     image_ref = resolve_docker_image_ref(ctx.execution.docker)
+    self_mounts = load_self_bind_mounts()
     cmd: list[str] = ["docker", "run", "--rm"]
     for path in paths:
-        cmd.extend(["-v", f"{path}:{path}"])
+        src = docker_bind_source(path, mounts=self_mounts)
+        cmd.extend(["-v", f"{src}:{path}"])
     cmd.append(image_ref)
     cmd.extend(["chown", "-R", f"{uid}:{gid}", *[str(p) for p in paths]])
 
@@ -447,6 +619,10 @@ def build_docker_mounts(ctx: ClusterContext, *, ssh_key_host: Path) -> list[str]
 
     ``ssh_key_host`` must be a mode-0600 file from ``prepare_container_ssh_key``
     (or equivalent); it is mounted read-only at ``CONTAINER_SSH_KEY``.
+
+    Left-hand ``-v`` sources are daemon host paths (``docker_bind_source``);
+    right-hand targets stay the paths this process uses (POSIX ``/atlas/…``
+    inside atlas-ui, or 1:1 on a native controller).
     """
     repo_root = ctx.repo_root.resolve()
     ssh_key = ssh_key_host.expanduser().resolve()
@@ -457,11 +633,15 @@ def build_docker_mounts(ctx: ClusterContext, *, ssh_key_host: Path) -> list[str]
             f"(set clusters.path in .config/config.yaml or {ENV_CLUSTERS_ROOT})"
         )
 
+    self_mounts = load_self_bind_mounts()
+
+    def bind(src_path: Path, dest_path: Path, mode: str) -> list[str]:
+        source = docker_bind_source(src_path, mounts=self_mounts)
+        return ["-v", f"{source}:{dest_path}:{mode}"]
+
     mounts = [
-        "-v",
-        f"{repo_root}:{repo_root}:rw",
-        "-v",
-        f"{ssh_key}:{CONTAINER_SSH_KEY}:ro",
+        *bind(repo_root, repo_root, "rw"),
+        *bind(ssh_key, Path(CONTAINER_SSH_KEY), "ro"),
     ]
 
     for mount_root in external_config_bind_mount_roots(ctx):
@@ -469,10 +649,10 @@ def build_docker_mounts(ctx: ClusterContext, *, ssh_key_host: Path) -> list[str]
             mount_root.mkdir(parents=True, exist_ok=True)
         if _is_under(mount_root, repo_root) or mount_root == repo_root:
             continue
-        mounts.extend(["-v", f"{mount_root}:{mount_root}:rw"])
+        mounts.extend(bind(mount_root, mount_root, "rw"))
 
     for host_path, container_path in _docker_local_playbook_mounts(ctx):
-        mounts.extend(["-v", f"{host_path}:{container_path}:ro"])
+        mounts.extend(bind(host_path, container_path, "ro"))
 
     return mounts
 

@@ -48,6 +48,13 @@ Docker bind-mounts:
 - Paths from `.config/config.yaml` / env that sit **outside** the checkout:
   `clusters.path` (`ATLAS_CLUSTERS_ROOT`) and `workspace.path` (`ATLAS_WORKSPACE_ROOT`).
   Sibling inventory+workspace under one parent collapse to a single parent `-v`.
+
+The **right-hand** side of each `-v` (and env inside krang) is the path clusterctl
+sees. The **left-hand** source is the Docker daemon host path: `docker inspect`
+of the current container when clusterctl runs in atlas-ui worker, else
+`ATLAS_CLUSTER_ROOT_HOST` / `ATLAS_CLUSTERS_ROOT_HOST` /
+`ATLAS_WORKSPACE_ROOT_HOST`, else 1:1. That split is what lets Compose mount
+host trees at `/atlas/clusterctl` (and friends) on Linux, macOS, and Windows.
 - Local playbook repos (`source: local`) as needed
 
 ### SSH key staging (docker)

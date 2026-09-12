@@ -4,6 +4,15 @@ All notable changes to `atlas-clusterctl` / `clusterctl` are documented here.
 
 ## [Unreleased] — publish readiness
 
+### Changed (docker executor — host bind source)
+
+- ``docker run -v`` left-hand side is the daemon host path (``docker inspect`` of
+  the current container, or ``ATLAS_*_ROOT_HOST``), while the container path
+  (and ``ATLAS_*_ROOT`` inside krang) stays POSIX. Enables atlas-ui worker on
+  Docker Desktop where in-container paths are ``/atlas/...``. Native 1:1
+  ``path:path`` mounts are unchanged when those env vars / inspect mounts are
+  absent.
+
 ### Changed (public `_template` refresh from inventory `dev/`)
 
 - Regenerated stack scaffolds from `atlas-inventory/clusters/dev/*` via
