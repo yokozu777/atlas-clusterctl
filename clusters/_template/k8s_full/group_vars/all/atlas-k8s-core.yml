@@ -19,17 +19,17 @@
 
 # Leaf DNS identity
 # (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
-dns_domain_suffix: example.com
-cluster_domain: "k8s.{{ dns_domain_suffix }}"
+dns_domain_suffix: dev-mxhash.com # Public DNS suffix for this cluster
+cluster_domain: "k8s.{{ dns_domain_suffix }}" # Cluster FQDN, usually a name under the DNS suffix
 k8s_cluster_domain: "{{ cluster_domain }}"
-dns_server_ip: 192.168.1.53
+dns_server_ip: 192.168.1.219 # Address of the lab DNS server
 
 sync_time_max_offset_seconds: 1.0
 sync_time_settle_seconds: 10
 sync_time_hard_step_threshold_seconds: 60
 sync_time_probe_timeout_seconds: 30
 # NTP for 03_sync_time (infra NTP / BIND host)
-ntp_servers:
+ntp_servers: # NTP servers used before package mirrors are reachable
   - "{{ dns_server_ip }}"
 
 # =============================================================================
@@ -40,8 +40,8 @@ ntp_servers:
 # repo metadata. Run 03_sync_time first; NTP from ntp_servers.
 # =============================================================================
 # VIP apex A: Terraform RFC2136 (09_lb_vip_dns). TSIG = same BIND as provision_dns_*.
-vip_address: 192.168.1.210
-k8s_lb_dns_tf_manage_a_record: true
+vip_address: 192.168.1.210 # Keepalived VIP for the API server
+k8s_lb_dns_tf_manage_a_record: true # Create the API A record with Terraform when on
 k8s_lb_dns_server: "{{ dns_server_ip }}"
 k8s_lb_dns_zone: "{{ dns_domain_suffix }}."
 k8s_lb_dns_key_name: "{{ dns_domain_suffix }}."
@@ -49,9 +49,13 @@ k8s_lb_dns_key_algorithm: hmac-sha256
 k8s_lb_dns_transport: tcp4
 k8s_lb_dns_a_ttl: 300
 
+# step-ca root on the infra node. Same list as node-foundation pki_ca_url.
+pki_ca_url:
+  - "https://ca.{{ dns_domain_suffix }}:8443/roots.pem"
+
 keepalived_router_id: LVS_LB
 # "" = auto default IPv4 NIC on each LB (mixed-OS: ens18 vs eth0)
-keepalived_interface: ""
+keepalived_interface: "" # NIC for Keepalived; empty uses the default IPv4 interface
 keepalived_virtual_router_id: 100
 keepalived_master_priority: 200
 keepalived_vrrp_instance: VI_1
@@ -83,16 +87,16 @@ nginx_upstream_fail_timeout: 30s
 # Package URI bake (11_k8s_hosts fallback when foundation drop-ins absent)
 # =============================================================================
 # Prefer nginx mirror host (do not also set pkg_repo_base — base wins over domain).
-pkg_repo_base: ""
-pkg_repo_nginx_ingress_domain: "repo.{{ dns_domain_suffix }}"
+pkg_repo_base: "" # Package mirror base URL; empty uses the nginx domain
+pkg_repo_nginx_ingress_domain: "repo.{{ dns_domain_suffix }}" # Domain of the nginx package mirror
 pkg_repo_upstreams: []
 
 # =============================================================================
 # Node packages / versions (11_k8s_hosts)
 # =============================================================================
-k8s_apt_repo_version: "1.36"
-k8s_version_ubuntu: "1.36.3-1.1"
-k8s_version_oracle: "1.36.3"
+k8s_apt_repo_version: "1.36" # Kubernetes apt repository minor version
+k8s_version_ubuntu: "1.36.3-1.1" # kubelet, kubeadm, and kubectl pin on Ubuntu
+k8s_version_oracle: "1.36.3" # kubelet, kubeadm, and kubectl pin on Oracle Linux
 k8s_packages_ubuntu:
   - kubelet={{ k8s_version_ubuntu }}
   - kubeadm={{ k8s_version_ubuntu }}
@@ -112,6 +116,9 @@ k8s_packages_oracle:
 # =============================================================================
 # containerd registry mirrors (11_k8s_hosts)
 # =============================================================================
+# Mode only: none, registry, or harbor. Image pulls use registry.<dns suffix>
+# on the infra node (192.168.1.219), not the guest hostname infra2.<suffix>.
+use_internal_docker_registry: registry
 # Upstream for infra pull-through (role 05) when use_internal_docker_registry=registry.
 # =============================================================================
 # Harbor: mirror_path in Harbor URL; none: hosts.toml mirrors are not created.
@@ -152,17 +159,17 @@ containerd_registry_mirrors:
 # 21_kubeadm_init, 22_cluster_join_token, 23_join_masters, 24_join_workers,
 # =============================================================================
 # 25_kubeadm_upgrade_control_plane, 26_kubeadm_upgrade_workers.
-k8s_cluster_name: kubernetes
+k8s_cluster_name: kubernetes # kubeadm cluster name
 k8s_dns_domain: cluster.local              # kubeadm dnsDomain; in-cluster: *.svc.<k8s_dns_domain>
-pod_subnet: 172.16.0.0/16
-service_subnet: 10.0.0.0/12
+pod_subnet: 172.16.0.0/16 # Pod CIDR passed to kubeadm
+service_subnet: 10.0.0.0/12 # Service CIDR passed to kubeadm
 cluster_dns_ip: 10.0.0.10              # kubeadm kube-dns: 10th address of service_subnet
-k8s_lb_hostname: kubelb
+k8s_lb_hostname: kubelb # Short hostname of the API load balancer
 control_plane_endpoint: "{{ k8s_lb_hostname }}.{{ dns_domain_suffix }}:{{ k8s_api_port }}"
 k8s_api_cert_sans:
   - "{{ vip_address }}"
   - "{{ k8s_lb_hostname }}.{{ dns_domain_suffix }}"
-etcd_version: v3.6.12
+etcd_version: v3.6.12 # etcd release pin
 
 # =============================================================================
 # Worker kernel modules (12_workers_kernel_rbd)
@@ -183,15 +190,15 @@ kernel_modules:
 # ---------------------------------------------------------------------------
 # Controller / targeting (paths use injected workspace)
 # ---------------------------------------------------------------------------
-k8s_api_port: 6443
-k8s_ca_cert_filename: example.crt
+k8s_api_port: 6443 # Kubernetes API port on the load balancer
+k8s_ca_cert_filename: mxhash.crt
 k8s_ca_cert_path: "{{ k8s_manifests_dir }}/{{ k8s_ca_cert_filename }}"
 admin_user: localuser
 k8s_admin_user: "{{ admin_user }}"  # compat alias for atlas-k8s-core / addons
 k8s_admin_home: "/home/{{ admin_user }}"
-k8s_lb_hosts: k8s_lbs
-k8s_master_hosts: k8s_masters
-k8s_worker_hosts: k8s_workers
+k8s_lb_hosts: k8s_lbs # Inventory group of API load balancers
+k8s_master_hosts: k8s_masters # Inventory group of control-plane nodes
+k8s_worker_hosts: k8s_workers # Inventory group of worker nodes
 k8s_node_kubeconfig: "{{ k8s_admin_home }}/.kube/config"
 k8s_python_venv: /opt/myenv
 k8s_kubeadm_admin_kubeconfig: /etc/kubernetes/admin.conf

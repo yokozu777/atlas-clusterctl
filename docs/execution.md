@@ -114,9 +114,12 @@ sudo chown -R "$(id -u):$(id -g)" workspace/<cluster_id>/ INV/tfstate INV/.git
 
 Inside the container, `ATLAS_CLUSTERS_ROOT` and `ATLAS_WORKSPACE_ROOT` are set so
 resolution matches the host. Before the inner command, clusterctl runs
-`mkdir -p /tmp/clusterctl/<workspace_id> /tmp/clusterctl-home` (Ansible controller
-temp and HOME on container-local FS). Local mode needs no mounts — paths are
-used as-is.
+`mkdir -p /tmp/clusterctl/<workspace_id> /tmp/clusterctl-home /tmp/clusterctl-home/.ansible_async`
+(Ansible controller temp, HOME, and `ANSIBLE_ASYNC_DIR` on container-local FS).
+`ANSIBLE_ASYNC_DIR` is an absolute path so `async` / `async_status` do not
+split between `$HOME/.ansible_async` and `/root/.ansible_async` when the
+container is uid 0 (Windows Compose / root workers). Local mode needs no
+mounts — paths are used as-is.
 
 ## Mode priority
 

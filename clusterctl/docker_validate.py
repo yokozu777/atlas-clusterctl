@@ -203,6 +203,26 @@ def docker_pull_image(image_ref: str, *, timeout_sec: int) -> tuple[bool, str]:
     )
 
 
+def cmd_docker_pull(ctx: ClusterContext) -> int:
+    """Pull ``execution.image:tag`` from cluster.yaml (worker / Apply)."""
+    docker_cfg = (
+        ctx.execution_configured
+        if ctx.execution_configured.is_docker
+        else ctx.execution
+    )
+    if not docker_cfg.is_docker:
+        raise ClusterctlError(
+            "execution.mode is not docker — set execution.image and execution.tag "
+            "in cluster.yaml"
+        )
+    image_ref = resolve_docker_image_ref(docker_cfg.docker)
+    ok, detail = docker_pull_image(image_ref, timeout_sec=DEFAULT_PULL_TIMEOUT_SEC)
+    if not ok:
+        raise ClusterctlError(f"docker pull {image_ref} failed: {detail}")
+    print(f"pulled {image_ref}: {detail}")
+    return 0
+
+
 def build_docker_smoke_command(
     ctx: ClusterContext, *, ssh_key_host: Path
 ) -> list[str]:

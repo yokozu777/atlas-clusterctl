@@ -1,5 +1,5 @@
 # Public scaffold ``_template/infra_edge`` (exported from ``dev/infra``).
-# Regenerate: python3 -m clusterctl.tools.export_template --from dev/infra --template infra_edge --flatten-cascade
+# Regenerate: python3 -m clusterctl.tools.export_template --from dev/infra --template infra_edge
 # Init: ./cluster init <env>/<name> --template infra_edge
 #
 # Scrub live hostnames / secrets before committing the public template.
@@ -18,11 +18,11 @@ id: ''
 display_name: null
 playbooks:
   atlas-compute-provision:
-    source: local
+    source: git
     layout: roles/
     shallow: true
-    sync: never
-    url: git@github.com:yokozu777/atlas-compute-provision.git
+    sync: always
+    url: git@gitea.mxhash.com:root/atlas-compute-provision.git
     ref: main
     entries:
       templates:
@@ -58,11 +58,11 @@ playbooks:
     path: atlas-compute-provision
     path_relative_to: sibling
   atlas-node-foundation:
-    source: local
+    source: git
     layout: roles/
     shallow: true
-    sync: never
-    url: git@github.com:yokozu777/atlas-node-foundation.git
+    sync: always
+    url: git@gitea.mxhash.com:root/atlas-node-foundation.git
     ref: main
     entries:
       # Short OS bootstrap before BIND/CA exist (no DNS rewrite / apt / CA download).
@@ -120,11 +120,11 @@ playbooks:
     path: atlas-node-foundation
     path_relative_to: sibling
   atlas-infra-edge:
-    source: local
+    source: git
     layout: roles/
     shallow: true
-    sync: never
-    url: git@github.com:yokozu777/atlas-infra-edge.git
+    sync: always
+    url: git@gitea.mxhash.com:root/atlas-infra-edge.git
     ref: main
     entries:
       infra:
@@ -164,7 +164,7 @@ phases:
 - init-infra-post: atlas-node-foundation/init-infra-post
 execution:
   mode: docker
-  image: yokozu/krang
+  image: harbor.mxhash.com/library/krang
   tag: latest
 cluster_id_aliases: {}
 inventory: hosts

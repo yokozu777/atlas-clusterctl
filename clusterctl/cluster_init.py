@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 from dataclasses import dataclass
@@ -34,6 +35,44 @@ _HIERARCHICAL_CLUSTER_ID = re.compile(r"^[a-z][a-z0-9._-]+/[a-z][a-z0-9._-]+$")
 # secrets.yml: never copy live credentials.
 # cluster.yml: legacy only (ADR 003); templates omit it; validate warns if present.
 _COPY_IGNORE = shutil.ignore_patterns("secrets.yml")
+
+# Post-init only: git/workspace not synced yet. Regular ``./cluster validate``
+# still reports these as ERROR. Do not include playbooks_incomplete or
+# playbook_file_*_missing (local source / broken YAML).
+_INIT_BOOTSTRAP_EXACT = frozenset(
+    {
+        "execution_docker_repos_missing",
+        "playbooks_lock_missing",
+    }
+)
+
+
+def is_init_bootstrap_code(code: str) -> bool:
+    """True when a validate code means 'sync/pull has not happened yet'."""
+    if code in _INIT_BOOTSTRAP_EXACT:
+        return True
+    if code.startswith("playbooks_lock_repo_missing_"):
+        return True
+    if (
+        code.startswith("playbooks_")
+        and code.endswith("_missing")
+        and not code.startswith("playbooks_lock_")
+        and code != "playbooks_incomplete"
+    ):
+        return True
+    return False
+
+
+def soften_init_bootstrap_issues(report) -> int:
+    """Downgrade bootstrap ERROR issues to WARNING. Returns how many changed."""
+    from clusterctl.validate import Severity
+
+    changed = 0
+    for issue in report.issues:
+        if issue.severity == Severity.ERROR and is_init_bootstrap_code(issue.code):
+            issue.severity = Severity.WARNING
+            changed += 1
+    return changed
 
 
 @dataclass(frozen=True)
@@ -192,6 +231,39 @@ def _patch_cluster_yaml(
     _write_yaml(path, data)
 
 
+def _seed_env_default_if_needed(root: Path, cluster_id: str) -> None:
+    """Copy ``_template/default`` to ``clusters/<env>/default`` when missing.
+
+    Hierarchical ``env/name`` only. Never overwrite an existing env-policy
+    directory (including ``--force`` on the leaf). Skip org ``default/…`` —
+    that layer is ``clusters/default/default``. Missing ``_template/default``
+    is a no-op so unit fixtures without the public scaffold still work.
+    """
+    from clusterctl.paths import clusters_root as resolve_clusters_root
+    from clusterctl.paths import product_clusters_root
+
+    text = normalize_cluster_id(cluster_id)
+    if "/" not in text:
+        return
+    env, _name = text.split("/", 1)
+    if env == "default":
+        return
+    dest = resolve_clusters_root(root) / env / "default"
+    if dest.exists():
+        return
+    source = product_clusters_root(root) / "_template" / "default"
+    if not source.is_dir():
+        return
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source, dest, ignore=_COPY_IGNORE)
+    policy_id = f"{env}/default"
+    _patch_cluster_yaml(
+        dest / CLUSTER_CONFIG_NAME,
+        policy_id,
+        display_name=policy_id,
+    )
+
+
 def _copy_runtime_files(source: Path, target: Path) -> None:
     for name in ("hosts", "group_vars", "pub_keys"):
         src = source / name
@@ -210,12 +282,24 @@ def _run_post_init_validate(root: Path, cluster_id: str) -> None:
     from clusterctl.context import ClusterContext
     from clusterctl.validate import format_report_text, validate_cluster
 
-    ctx = ClusterContext.load(cluster_id=cluster_id)
-    report = validate_cluster(ctx, root=root)
-    if report.ok:
-        return
-    message = format_report_text(report).strip()
-    raise ClusterctlError(f"init validation failed for {cluster_id!r}:\n{message}")
+    previous_root = os.environ.get("ATLAS_CLUSTER_ROOT")
+    os.environ["ATLAS_CLUSTER_ROOT"] = str(root.resolve())
+    try:
+        ctx = ClusterContext.load(cluster_id=cluster_id)
+        # Skip docker pull / in-container smoke: image and git mounts are Apply.
+        report = validate_cluster(ctx, root=root, docker_smoke=False)
+        softened = soften_init_bootstrap_issues(report)
+        if report.ok:
+            if softened or report.warnings:
+                print(format_report_text(report).strip())
+            return
+        message = format_report_text(report).strip()
+        raise ClusterctlError(f"init validation failed for {cluster_id!r}:\n{message}")
+    finally:
+        if previous_root is None:
+            os.environ.pop("ATLAS_CLUSTER_ROOT", None)
+        else:
+            os.environ["ATLAS_CLUSTER_ROOT"] = previous_root
 
 
 def init_cluster(root: Path, cluster_id: str, *, options: InitOptions | None = None) -> Path:
@@ -242,6 +326,7 @@ def init_cluster(root: Path, cluster_id: str, *, options: InitOptions | None = N
 
     source = _resolve_copy_source(root, opts)
     target.parent.mkdir(parents=True, exist_ok=True)
+    _seed_env_default_if_needed(root, cluster_id)
 
     if config_dir_is_usable(source):
         shutil.copytree(source, target, ignore=_COPY_IGNORE)

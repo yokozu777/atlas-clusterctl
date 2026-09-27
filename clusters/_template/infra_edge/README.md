@@ -17,8 +17,8 @@ Product pair (copy/align with sibling `atlas-infra-edge`):
 ./cluster init prod/infra --template infra_edge --dns-suffix prod.example.com
 ```
 
-Then edit `hosts`, fill `atlas-infra-edge.secrets.yml` + `atlas-compute-provision.secrets.yml`,
-and tune `atlas-infra-edge.yml` gates.
+Then edit `hosts`, fill `atlas-infra-edge.secrets.yml` (compute-provision secrets
+live on ``<env>/default``), and tune `atlas-infra-edge.yml` gates.
 
 Leaf DNS: `--dns-suffix` sets the shared suffix; `cluster_domain` keeps the
 `infra.` template prefix unless you edit `atlas-*.yml`.

@@ -15,7 +15,7 @@
 # Leaf DNS identity
 # (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
 dns_domain_suffix: example.com
-cluster_domain: "infra.{{ dns_domain_suffix }}"
+cluster_domain: "infra.{{ dns_domain_suffix }}" # Cluster FQDN, usually a name under the DNS suffix
 
 infra_platform_hosts: infra_platform
 
@@ -24,38 +24,38 @@ infra_platform_hosts: infra_platform
 # =============================================================================
 # Derived setup_* flags must stay consistent with pull modes (01_validate_vars).
 
-nexus_host: "example.com"
+nexus_host: "example.com" # Nexus hostname for internal charts and packages
 nexus_base_url: "https://{{ nexus_host }}/repository"
-harbor_host: "harbor.{{ dns_domain_suffix }}"
+harbor_host: "harbor.{{ dns_domain_suffix }}" # Harbor hostname for internal images
 
-setup_bind: true
-setup_ntp: true
-setup_stepca: true
-use_internal_docker_registry: registry
-setup_registry: "{{ use_internal_docker_registry == 'registry' }}"
-setup_registry_nginx: "{{ use_internal_docker_registry == 'registry' }}"
+setup_bind: true # Install BIND on this host when on
+setup_ntp: true # Install the NTP server when on
+setup_stepca: true # Install step-ca when on
+use_internal_docker_registry: registry # none, or the internal registry mode for node pulls
+setup_registry: "{{ use_internal_docker_registry == 'registry' }}" # Deploy the local registry when on
+setup_registry_nginx: "{{ use_internal_docker_registry == 'registry' }}" # Deploy registry nginx when on
 # APT/RPM nginx mirror (infra-local). Warm = enable_repo_*; client URIs = pkg_repos (+ pkg_repos_extra).
 setup_pkg_repo_nginx: true
 setup_apt_rpm_nginx: "{{ setup_pkg_repo_nginx }}"
 # Legacy label only (does not derive setup_apt_rpm_nginx). Client path uses pkg_repos (+ pkg_repos_extra).
 use_internal_rpm_apt_repo: nginx
 install_managed_pkg_repos: false
-use_internal_helm_repo: nginx
-setup_helm_repo_nginx: true
+use_internal_helm_repo: nginx # none, nginx, or nexus
+setup_helm_repo_nginx: true # Deploy the Helm repo nginx mirror when on
 setup_helm_nginx: "{{ use_internal_helm_repo == 'nginx' and setup_helm_repo_nginx }}"
-setup_custom_nginx: true
+setup_custom_nginx: true # Deploy custom content nginx when on
 get_snapshotter: internal-nginx
 snapshotter_version: 8.6.0
 snapshotter_github_repo: https://github.com/kubernetes-csi/external-snapshotter.git
 setup_custom_content_nginx: "{{ get_snapshotter == 'internal-nginx' and setup_custom_nginx }}"
-setup_infra_stats: true
+setup_infra_stats: true # Publish the infra stats page when on
 setup_compose_systemd: true
 
 # =============================================================================
 # Site identity
 # =============================================================================
 dns_server_ip: "{{ groups[infra_platform_hosts] | first }}"
-timezone: Europe/Moscow
+timezone: Europe/Moscow # IANA timezone for the node
 
 # =============================================================================
 # BIND — core
@@ -70,14 +70,14 @@ bind_hostname: "bind.{{ dns_domain_suffix }}"
 bind_image: "ubuntu/bind9:edge"
 bind_listen_ip: "{{ dns_server_ip }}"
 bind_container_timezone: "{{ timezone | default('Europe/Moscow') }}"
-bind_forwarders:
+bind_forwarders: # Upstream resolvers BIND forwards to
   - 192.168.1.1
-bind_forward_policy: only
-bind_allow_query:
+bind_forward_policy: only # BIND forward policy, only or first
+bind_allow_query: # Clients allowed to query BIND
   - 127.0.0.1
   - 192.168.1.0/24
   - 172.16.0.0/12
-bind_allow_recursion:
+bind_allow_recursion: # Clients allowed to recurse through BIND
   - 127.0.0.1
   - 192.168.1.0/24
   - 172.16.0.0/12
@@ -192,7 +192,7 @@ ntp_listen_ip: "{{ dns_server_ip }}"
 ntp_upstream_servers:
   - 0.pool.ntp.org
   - 1.pool.ntp.org
-ntp_allowed_networks:
+ntp_allowed_networks: # Networks allowed to query the NTP server
   - 127.0.0.0/8
   - 192.168.1.0/24
   - 172.16.0.0/12
@@ -218,7 +218,7 @@ stepca_listen_ip: "{{ dns_server_ip }}"
 stepca_https_port: 8443
 stepca_container_https_port: 9000
 stepca_ocsp_port: 9000
-stepca_init_name: Example Internal CA
+stepca_init_name: Example Internal CA # Name used when initializing step-ca
 stepca_init_dns_names: "ca.{{ dns_domain_suffix }},localhost"
 # ACME / TLS issuance hostname (infra-edge compose TLS scripts).
 # Not node-foundation pki_ca_url (roots.pem trust-store list).
@@ -365,7 +365,7 @@ enable_repo_k8s_1_36: true
 enable_repo_yum_docker_ce_stable_9: true
 enable_repo_yum_docker_ce_stable_10: true
 enable_repo_k8s_ubuntu_1_36: true
-k8s_apt_repo_version: '1.36'
+k8s_apt_repo_version: '1.36' # Kubernetes apt repository major
 
 # --- Oracle Linux 9 ---
 
@@ -426,7 +426,7 @@ pkg_repo_nginx_image: "nginx:1.27-alpine"
 pkg_repo_nginx_container_name: pkg-repo-nginx
 pkg_repo_nginx_listen_ip: "{{ dns_server_ip }}"
 pkg_repo_nginx_https_port: 443
-pkg_repo_nginx_ingress_domain: "repo.{{ dns_domain_suffix }}"
+pkg_repo_nginx_ingress_domain: "repo.{{ dns_domain_suffix }}" # Domain of the nginx package mirror
 pkg_repo_nginx_host: "repo.{{ dns_domain_suffix }}"
 pkg_repo_nginx_cache_max_size: 20g
 pkg_repo_nginx_cache_metadata_max_size: 2g
@@ -728,7 +728,7 @@ helm_repo_nginx_image: "nginx:1.27-alpine"
 helm_repo_nginx_container_name: helm-repo-nginx
 helm_repo_nginx_listen_ip: "{{ dns_server_ip }}"
 helm_repo_nginx_https_port: 443
-helm_repo_nginx_ingress_domain: "helm.{{ dns_domain_suffix }}"
+helm_repo_nginx_ingress_domain: "helm.{{ dns_domain_suffix }}" # Domain of the Helm chart mirror
 helm_repo_nginx_host: "helm.{{ dns_domain_suffix }}"
 helm_repo_nginx_raw_host: "raw.{{ helm_repo_nginx_ingress_domain }}"
 helm_repo_nginx_releases_host: "releases.{{ helm_repo_nginx_ingress_domain }}"
@@ -925,16 +925,16 @@ compose_systemd_infra_stats_unit_name: infra-stats-compose
 
 nginx_cache_sync_enabled: false
 nginx_cache_sync_direction: pull
-nginx_cache_sync_remote_host: 192.168.1.212
+nginx_cache_sync_remote_host: ""
 nginx_cache_sync_remote_port: 2224
-nginx_cache_sync_remote_dir: /home/uploader/infra-cache-mirror
-nginx_cache_sync_remote_user: uploader
+nginx_cache_sync_remote_dir: ""
+nginx_cache_sync_remote_user: ""
 nginx_cache_sync_ssh_auth: password
 nginx_cache_sync_ssh_private_key: "{{ ansible_ssh_private_key_file | default(lookup('env', 'SSH_KEY')) }}"
-nginx_cache_sync_pkg_repo_enabled: true
-nginx_cache_sync_helm_repo_enabled: true
-nginx_cache_sync_registry_enabled: true
-nginx_cache_sync_custom_www_enabled: true
+nginx_cache_sync_pkg_repo_enabled: false
+nginx_cache_sync_helm_repo_enabled: false
+nginx_cache_sync_registry_enabled: false
+nginx_cache_sync_custom_www_enabled: false
 nginx_cache_sync_stop_services: true
 nginx_cache_sync_rsync_compress: true
 nginx_cache_sync_min_free_gb: 5
@@ -942,9 +942,11 @@ nginx_cache_sync_warm_after_pull: true
 nginx_cache_sync_skip_if_fresh: true
 nginx_cache_sync_fresh_max_age_hours: 24
 
-# OCI seed (role 14-infra-cache-seed). Off: XOR load vs nginx_cache_sync_enabled.
+# OCI seed (role 14-infra-cache-seed). Load is on.
+# XOR: do not enable nginx_cache_sync_enabled at the same time.
 # Publish packs /opt caches into an external-registry image; not a catalog slot.
-# Robot creds: atlas-infra-edge.secrets.yml. Tag must not be latest.
+# Robot creds: atlas-infra-edge.secrets.yml (load may be empty for public Docker Hub).
+# Tag must not be latest.
 infra_cache_seed_publish_enabled: false
 infra_cache_seed_publish_image: "example.com/library/atlas-seed-cache"
 infra_cache_seed_publish_tag: "23-08-2026"
@@ -953,9 +955,9 @@ infra_cache_seed_publish_include:
   helm_repo: true
   pkg_repo: true
   custom_www: true
-infra_cache_seed_load_enabled: true
-infra_cache_seed_load_image: "example.com/library/atlas-seed-cache"
-infra_cache_seed_load_tag: "23-08-2026"
+infra_cache_seed_load_enabled: true # Load the cache seed image when on
+infra_cache_seed_load_image: "example.com/library/atlas-seed-cache" # Image that carries the cache seed
+infra_cache_seed_load_tag: "27-09-2026" # Tag of the cache seed image
 infra_cache_seed_load_include:
   registry: true
   helm_repo: true
@@ -970,8 +972,8 @@ infra_cache_seed_load_skip_if_same_digest: true
 infra_cache_seed_load_stamp_path: "{{ infra_bootstrap_repo_state_dir | default('/var/lib/atlas-infra') }}/cache-seed.stamp"
 infra_cache_seed_nginx_uid: 101
 infra_cache_seed_nginx_gid: 101
-infra_cache_seed_registry_tls_ca_enabled: true
-infra_cache_seed_registry_tls_ca_src: "https://ca.example.com:8443/roots.pem"
+infra_cache_seed_registry_tls_ca_enabled: false # Install a CA into Docker certs.d for the seed registry
+infra_cache_seed_registry_tls_ca_src: "" # HTTPS URL or on-host PEM for the seed registry CA
 infra_cache_seed_registry_tls_ca_dir: ""
 infra_cache_seed_registry_tls_ca_validate_certs: false
 

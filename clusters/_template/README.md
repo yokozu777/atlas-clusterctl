@@ -53,8 +53,10 @@ After init:
    - `dns_domain_suffix` — pass `--dns-suffix` at init, or edit YAML
    - `cluster_domain` — stack prefix is template-owned (`redis.` / `kafka.` / …);
      change it only by editing overlays (or picking another `--template`)
-3. Fill product secrets: `group_vars/all/atlas-<repo>.secrets.yml` next to each
-   `atlas-<repo>.yml` (Vault-encrypt in place). Prefer copying the sibling pair.
+3. Fill product secrets. Compute-provision and node-foundation secrets live on
+   ``clusters/<env>/default/`` (seeded from ``_template/default`` on first
+   hierarchical init). Stack-specific ``atlas-<repo>.secrets.yml`` stay on the
+   leaf next to the catalog overlay (Vault-encrypt in place).
 4. Edit `hosts` and stack-specific overlays; replace `CHANGEME` before live apply.
 
 See [docs/clusters.md — Leaf DNS identity](../../docs/clusters.md#leaf-dns-identity),

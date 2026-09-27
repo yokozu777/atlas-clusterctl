@@ -9,7 +9,7 @@ This scaffold builds shared cloud-init templates once. Stack leaves
 ```bash
 ./cluster init lab/pve-templates --template pve_templates --dns-suffix example.com
 ./cluster use lab/pve-templates
-# fill atlas-compute-provision.secrets.yml; set provision_pve_host / target_node
+# fill compute secrets + PVE knobs on <env>/default; leaf keeps the golden catalog
 ./cluster validate --strict
 ./cluster run --phases templates
 ```

@@ -5,7 +5,7 @@ all:
         redis_lbs:
           hosts:
             # Mixed-OS SoT: ../MIXED_OS_KAFKA_REDIS.md (Phase 2 applied)
-            192.168.1.240:
+            192.168.1.141:
               hostname: redis-lb01.example.com
               provision:
                 vmid: "5710"
@@ -18,7 +18,7 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
-            192.168.1.241:
+            192.168.1.142:
               hostname: redis-lb02.example.com
               provision:
                 vmid: "5711"
@@ -33,7 +33,7 @@ all:
                     storage: local-zfs
         redis_proxies:
           hosts:
-            192.168.1.242:
+            192.168.1.143:
               hostname: redis-proxy01.example.com
               provision:
                 vmid: "5712"
@@ -46,7 +46,7 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
-            192.168.1.243:
+            192.168.1.144:
               hostname: redis-proxy02.example.com
               provision:
                 vmid: "5713"
@@ -61,7 +61,7 @@ all:
                     storage: local-zfs
         redis_cluster_masters:
           hosts:
-            192.168.1.244:
+            192.168.1.145:
               hostname: redis-master01.example.com
               provision:
                 vmid: "5714"
@@ -74,7 +74,7 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
-            192.168.1.245:
+            192.168.1.146:
               hostname: redis-master02.example.com
               provision:
                 vmid: "5715"
@@ -87,7 +87,7 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
-            192.168.1.246:
+            192.168.1.147:
               hostname: redis-master03.example.com
               provision:
                 vmid: "5716"
@@ -102,7 +102,7 @@ all:
                     storage: local-zfs
         redis_cluster_replicas:
           hosts:
-            192.168.1.247:
+            192.168.1.148:
               hostname: redis-replica01.example.com
               provision:
                 vmid: "5717"
@@ -115,7 +115,7 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
-            192.168.1.248:
+            192.168.1.149:
               hostname: redis-replica02.example.com
               provision:
                 vmid: "5718"
@@ -128,7 +128,7 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
-            192.168.1.249:
+            192.168.1.150:
               hostname: redis-replica03.example.com
               provision:
                 vmid: "5719"

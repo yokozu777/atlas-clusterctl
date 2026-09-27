@@ -17,8 +17,8 @@ Product pair (copy/align with sibling `atlas-jenkins-agent`):
 ```
 
 Then edit `hosts`, fill `atlas-jenkins-agent.secrets.yml` (`jenkins_admin_password`), set
-`jenkins_url` / CA paths in `atlas-jenkins-agent.yml`, and provision secrets in
-`atlas-compute-provision.secrets.yml`.
+`jenkins_url` / CA paths in `atlas-jenkins-agent.yml`. Compute-provision secrets
+live on ``<env>/default``.
 
 Leaf DNS: `--dns-suffix` sets the shared suffix; `cluster_domain` keeps the
 `jenkins.` template prefix unless you edit `atlas-*.yml`.

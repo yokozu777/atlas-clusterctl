@@ -8,7 +8,7 @@ provision_gateway: 192.168.1.1
 # Proxmox — SSH (image upload / qm) + API (Terraform)
 # =============================================================================
 provision_pve_host: "192.168.1.20" # provision_pve_host: "192.168.1.245"
-provision_pve_user: root
+provision_pve_user: root # SSH user on the Proxmox node
 provision_pve_inventory_name: pve
 provision_pve_inventory_group: proxmox
 
@@ -20,7 +20,7 @@ provision_tf_parallelism: 3
 # =============================================================================
 # DNS — RFC2136 / TSIG
 # =============================================================================
-dns_server_ip: 192.168.1.53
+dns_server_ip: 192.168.1.219
 provision_dns_server: "{{ dns_server_ip | default(provision_gateway) }}"
 provision_dns_zone: "{{ dns_domain_suffix }}."
 provision_dns_key_name: "{{ dns_domain_suffix }}."
@@ -37,7 +37,7 @@ provision_vm_disk_cache: unsafe
 provision_vm_disk_format: raw
 provision_vm_network_bridge: vmbr0
 provision_vm_ciuser: root
-provision_ssh_public_key_file: "{{ cluster_pub_keys_dir }}/localuser.pub"
+provision_ssh_public_key_file: "{{ cluster_pub_keys_dir }}/localuser.pub" # Cloud-init public key installed as localuser
 
 # =============================================================================
 # Terraform providers (krang image filesystem mirror; non-root readable)
@@ -49,9 +49,9 @@ provision_tf_plugin_dir: /usr/local/share/terraform/plugins
 # =============================================================================
 provision_tf_state_local_dir: "{{ atlas_inventory_root }}"
 provision_tf_state_git_discard_local: true
-gitea_host: "example.com"
-provision_tf_state_repo: "git@{{ gitea_host }}:org/atlas-inventory.git"
-provision_tf_state_branch: main
-provision_tf_state_git_push: true
+gitea_host: "example.com" # Git host for the Terraform state repo
+provision_tf_state_repo: "git@{{ gitea_host }}:root/atlas-inventory.git" # Remote URL of the Terraform state repo
+provision_tf_state_branch: main # Branch that stores terraform.tfstate
+provision_tf_state_git_push: false # Push terraform.tfstate to git when on
 git_user_name: "atlas-runner"
 git_user_email: "atlas-runner@example.com"

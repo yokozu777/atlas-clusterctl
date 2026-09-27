@@ -22,23 +22,23 @@
 
 # Leaf DNS identity
 # (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
-dns_domain_suffix: example.com
-cluster_domain: "k8s.{{ dns_domain_suffix }}"
+dns_domain_suffix: dev-mxhash.com # Public DNS suffix for this cluster
+cluster_domain: "k8s.{{ dns_domain_suffix }}" # Cluster FQDN, usually a name under the DNS suffix
 k8s_cluster_domain: "{{ cluster_domain }}"
-dns_server_ip: 192.168.1.53
+dns_server_ip: 192.168.1.219 # Address of the lab DNS server
 
-nexus_host: "example.com"
+nexus_host: "nexus.mxhash.com" # Nexus hostname for internal charts and packages
 nexus_base_url: "https://{{ nexus_host }}/repository"
-harbor_host: "harbor.{{ dns_domain_suffix }}"
+harbor_host: "harbor.{{ dns_domain_suffix }}" # Harbor hostname for internal images
 harbor_mirror_base: "https://{{ harbor_host }}/v2"
 
 # PKI / TLS expectations for pull-through clients (CA lives on ci/infra).
 setup_stepca: true
 
 # --- Docker registry (atlas-k8s-core 01_validate_vars / 11_k8s_hosts) ---
-use_internal_docker_registry: registry
-setup_registry: "{{ use_internal_docker_registry == 'registry' }}"
-setup_registry_nginx: "{{ use_internal_docker_registry == 'registry' }}"
+use_internal_docker_registry: registry # Docker registry mode: none, registry, or harbor
+setup_registry: "{{ use_internal_docker_registry == 'registry' }}" # Deploy the local registry when on
+setup_registry_nginx: "{{ use_internal_docker_registry == 'registry' }}" # Deploy registry nginx when on
 registry_host: "registry.{{ dns_domain_suffix }}"
 registry_ingress_domain: "registry.{{ dns_domain_suffix }}"
 registry_tls_enabled: true
@@ -53,20 +53,20 @@ setup_apt_rpm_nginx: "{{ setup_pkg_repo_nginx }}"
 install_managed_pkg_repos: false
 install_additional_repos: false
 # cleanup_repositories — atlas-node-foundation.yml (must stay true for nginx/nexus)
-pkg_repo_nginx_ingress_domain: "repo.{{ dns_domain_suffix }}"
+pkg_repo_nginx_ingress_domain: "repo.{{ dns_domain_suffix }}" # Domain of the nginx package mirror
 pkg_repo_tls_enabled: true
 
 # --- Helm (atlas-k8s-addons 130_validate_vars / 210_helm_bootstrap) ---
-use_internal_helm_repo: nginx
-setup_helm_repo_nginx: true
+use_internal_helm_repo: nginx # Helm mirror mode: none, nginx, or nexus
+setup_helm_repo_nginx: true # Deploy the Helm repo nginx mirror when on
 setup_helm_nginx: "{{ use_internal_helm_repo == 'nginx' and setup_helm_repo_nginx }}"
-helm_repo_nginx_ingress_domain: "helm.{{ dns_domain_suffix }}"
+helm_repo_nginx_ingress_domain: "helm.{{ dns_domain_suffix }}" # Domain of the Helm chart mirror
 helm_repo_nginx_host: "helm.{{ dns_domain_suffix }}"
 helm_repo_tls_enabled: true
 # helm_repo_upstreams — atlas-k8s-addons.yml
 
 # Snapshotter / static content gate (atlas-k8s-addons.yml references setup_custom_nginx)
-setup_custom_nginx: true
+setup_custom_nginx: true # Deploy custom content nginx when on
 custom_nginx_ingress_domain: "static.{{ dns_domain_suffix }}"
 custom_nginx_tls_enabled: true
 

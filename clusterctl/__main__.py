@@ -343,6 +343,13 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     repos_sub.add_parser("show", help="show resolved repo config and readiness")
 
+    docker_p = sub.add_parser("docker", help="docker executor helpers")
+    docker_sub = docker_p.add_subparsers(dest="docker_command", required=True)
+    docker_sub.add_parser(
+        "pull",
+        help="pull execution.image:tag from cluster.yaml",
+    )
+
     val_p = sub.add_parser("validate", help="validate cluster config and repo artifacts")
     val_p.add_argument(
         "--repo",
@@ -773,6 +780,13 @@ def main(argv: list[str] | None = None) -> int:
                 return cmd_repos_status(ctx, as_json=bool(getattr(args, "json", False)))
             if args.repos_command == "show":
                 return cmd_repos_show(ctx)
+
+        if args.command == "docker":
+            ctx = _load_context(args)
+            from clusterctl.docker_validate import cmd_docker_pull
+
+            if args.docker_command == "pull":
+                return cmd_docker_pull(ctx)
 
         ctx = _load_context(args)
 

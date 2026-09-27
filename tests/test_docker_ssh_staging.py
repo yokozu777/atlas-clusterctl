@@ -112,6 +112,17 @@ class PrepareContainerSshKeyTest(unittest.TestCase):
             staging_parent=self.staging,
         )
 
+    def test_prepare_normalizes_crlf(self) -> None:
+        self.src.write_bytes(b"-----BEGIN OPENSSH PRIVATE KEY-----\r\nunit\r\n")
+        prepared = self._prepare()
+        try:
+            self.assertEqual(
+                prepared.key_path.read_bytes(),
+                b"-----BEGIN OPENSSH PRIVATE KEY-----\nunit\n",
+            )
+        finally:
+            prepared.cleanup()
+
     def test_prepare_permissions_prefix_and_contents(self) -> None:
         prepared = self._prepare()
         try:

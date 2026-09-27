@@ -13,6 +13,7 @@ import yaml
 
 from clusterctl.context import ClusterContext
 from clusterctl.docker_executor import (
+    CONTAINER_ASYNC_DIR,
     CONTAINER_HOME,
     CONTAINER_NSS_USER,
     CONTAINER_NSS_WRAPPER_SO,
@@ -239,6 +240,8 @@ class DockerExecutorUnifiedTest(unittest.TestCase):
             self.assertIn("/tmp/clusterctl/", joined)
             self.assertIn(CONTAINER_HOME, joined)
             self.assertIn(f"HOME={CONTAINER_HOME}", joined)
+            self.assertIn(CONTAINER_ASYNC_DIR, joined)
+            self.assertIn(f"ANSIBLE_ASYNC_DIR={CONTAINER_ASYNC_DIR}", joined)
             self.assertIn(CONTAINER_NSS_WRAPPER_SO, joined)
             self.assertIn("NSS_WRAPPER_PASSWD", joined)
             self.assertIn("LD_PRELOAD", joined)

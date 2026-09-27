@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import tempfile
 import unittest
@@ -9,8 +10,14 @@ from pathlib import Path
 
 import yaml
 
-from clusterctl.cluster_init import InitOptions, init_cluster
+from clusterctl.cluster_init import (
+    InitOptions,
+    init_cluster,
+    is_init_bootstrap_code,
+    soften_init_bootstrap_issues,
+)
 from clusterctl.exceptions import ClusterctlError
+from clusterctl.validate import Severity, ValidationIssue, ValidationReport
 
 
 class ClusterInitTest(unittest.TestCase):
@@ -474,6 +481,263 @@ class ClusterInitTest(unittest.TestCase):
             parser.parse_args(
                 ["init", "lab/x", "--template", "--domain-prefix", "staging"]
             )
+
+    def test_init_bootstrap_codes(self) -> None:
+        self.assertTrue(is_init_bootstrap_code("playbooks_atlas-compute-provision_missing"))
+        self.assertTrue(is_init_bootstrap_code("execution_docker_repos_missing"))
+        self.assertTrue(is_init_bootstrap_code("playbooks_lock_missing"))
+        self.assertTrue(
+            is_init_bootstrap_code("playbooks_lock_repo_missing_atlas-compute-provision")
+        )
+        self.assertFalse(is_init_bootstrap_code("playbooks_incomplete"))
+        self.assertFalse(is_init_bootstrap_code("playbook_file_atlas-k8s-core_init_missing"))
+        self.assertFalse(is_init_bootstrap_code("controller_contract"))
+        self.assertFalse(is_init_bootstrap_code("secrets_invalid"))
+
+    def test_soften_init_bootstrap_issues(self) -> None:
+        report = ValidationReport(cluster_id="lab/x")
+        report.issues.extend(
+            [
+                ValidationIssue(
+                    Severity.ERROR,
+                    "playbooks_atlas-compute-provision_missing",
+                    "layout not ready",
+                ),
+                ValidationIssue(Severity.ERROR, "controller_contract", "no pub_keys"),
+            ]
+        )
+        changed = soften_init_bootstrap_issues(report)
+        self.assertEqual(changed, 1)
+        self.assertEqual(report.issues[0].severity, Severity.WARNING)
+        self.assertEqual(report.issues[1].severity, Severity.ERROR)
+        self.assertFalse(report.ok)
+
+    def _git_playbooks_block(self) -> dict:
+        return {
+            "atlas-compute-provision": {
+                "source": "git",
+                "layout": "roles/",
+                "shallow": True,
+                "sync": "always",
+                "url": "git@example.com:atlas-compute-provision.git",
+                "ref": "main",
+                "entries": {
+                    "templates": {
+                        "file": "playbooks/build_templates.yaml",
+                        "invocations": [{"tags": "all"}],
+                    }
+                },
+                "path": "atlas-compute-provision",
+                "path_relative_to": "repo_root",
+            }
+        }
+
+    def _write_git_playbooks_source(self, *, pub_keys: bool) -> Path:
+        org = self.root / "clusters" / "default" / "default" / "cluster.yaml"
+        org.parent.mkdir(parents=True, exist_ok=True)
+        org.write_text(
+            yaml.safe_dump(
+                {
+                    "schema_version": 2,
+                    "id": "default/default",
+                    "playbooks": self._git_playbooks_block(),
+                    "phases": [{"templates": "atlas-compute-provision/templates"}],
+                    "execution": {"mode": "local"},
+                },
+                sort_keys=False,
+            ),
+            encoding="utf-8",
+        )
+        source = self.root / "clusters" / "_template" / "git_src"
+        source.mkdir(parents=True, exist_ok=True)
+        (source / "cluster.yaml").write_text(
+            yaml.safe_dump(
+                {
+                    "schema_version": 2,
+                    "id": "",
+                    "display_name": None,
+                    "playbooks": self._git_playbooks_block(),
+                    "phases": [{"templates": "atlas-compute-provision/templates"}],
+                    "execution": {"mode": "local"},
+                    "inventory": "hosts",
+                },
+                sort_keys=False,
+            ),
+            encoding="utf-8",
+        )
+        (source / "hosts").write_text(
+            "all:\n  hosts: {}\n  vars:\n    ansible_python_interpreter: /usr/bin/python3\n",
+            encoding="utf-8",
+        )
+        self._write_atlas_dns_overlay(
+            source,
+            {
+                "dns_domain_suffix": "example.com",
+                "cluster_domain": "k8s.{{ dns_domain_suffix }}",
+            },
+        )
+        if pub_keys:
+            pub = source / "pub_keys"
+            pub.mkdir(parents=True, exist_ok=True)
+            (pub / "localuser.pub").write_text(
+                "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAItest localuser\n",
+                encoding="utf-8",
+            )
+        return source
+
+    def _isolated_init_env(self) -> dict[str, str | None]:
+        keys = ("ATLAS_CLUSTER_ROOT", "ATLAS_CLUSTERS_ROOT", "ATLAS_WORKSPACE_ROOT")
+        saved = {key: os.environ.get(key) for key in keys}
+        os.environ["ATLAS_CLUSTER_ROOT"] = str(self.root)
+        os.environ.pop("ATLAS_CLUSTERS_ROOT", None)
+        os.environ["ATLAS_WORKSPACE_ROOT"] = str(self.root / "workspace")
+        return saved
+
+    def _restore_init_env(self, saved: dict[str, str | None]) -> None:
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    def test_init_git_playbooks_empty_workspace_keeps_leaf(self) -> None:
+        self._write_git_playbooks_source(pub_keys=True)
+        saved = self._isolated_init_env()
+        try:
+            target = init_cluster(
+                self.root,
+                "lab/git",
+                options=InitOptions(template_name="git_src", validate=True),
+            )
+            self.assertTrue(target.is_dir())
+            self.assertTrue((target / "cluster.yaml").is_file())
+            self.assertFalse(
+                (
+                    self.root
+                    / "workspace"
+                    / "lab"
+                    / "git"
+                    / "repos"
+                    / "atlas-compute-provision"
+                    / "roles"
+                ).is_dir()
+            )
+            from clusterctl.context import ClusterContext
+            from clusterctl.validate import validate_cluster
+
+            ctx = ClusterContext.load(cluster_id="lab/git")
+            report = validate_cluster(ctx, root=self.root, docker_smoke=False)
+            codes = {issue.code for issue in report.errors}
+            self.assertIn("playbooks_atlas-compute-provision_missing", codes)
+        finally:
+            self._restore_init_env(saved)
+
+    def test_init_validate_still_rolls_back_controller_contract(self) -> None:
+        self._write_git_playbooks_source(pub_keys=False)
+        saved = self._isolated_init_env()
+        try:
+            with self.assertRaises(ClusterctlError) as ctx:
+                init_cluster(
+                    self.root,
+                    "lab/bad",
+                    options=InitOptions(template_name="git_src", validate=True),
+                )
+            self.assertIn("init validation failed", str(ctx.exception))
+            self.assertFalse((self.root / "clusters" / "lab" / "bad").exists())
+        finally:
+            self._restore_init_env(saved)
+
+    def _seed_pve_and_env_templates(self) -> None:
+        repo = Path(__file__).resolve().parents[1]
+        for name in ("default", "pve_templates"):
+            source = repo / "clusters" / "_template" / name
+            dest = self.root / "clusters" / "_template" / name
+            if dest.exists():
+                shutil.rmtree(dest)
+            shutil.copytree(source, dest)
+
+    def test_init_hierarchical_seeds_env_default_from_template(self) -> None:
+        self._seed_pve_and_env_templates()
+        leaf = init_cluster(
+            self.root,
+            "lab/foo",
+            options=InitOptions(template_name="pve_templates", validate=False),
+        )
+        env_default = self.root / "clusters" / "lab" / "default"
+        self.assertTrue(env_default.is_dir(), env_default)
+        cfg = yaml.safe_load((env_default / "cluster.yaml").read_text(encoding="utf-8"))
+        self.assertEqual(cfg["id"], "lab/default")
+        self.assertTrue(
+            (
+                env_default
+                / "group_vars"
+                / "all"
+                / "atlas-compute-provision.secrets.yml"
+            ).is_file()
+        )
+        self.assertTrue(
+            (env_default / "group_vars" / "all" / "atlas-node-foundation.yml").is_file()
+        )
+        self.assertEqual(leaf, self.root / "clusters" / "lab" / "foo")
+        leaf_all = leaf / "group_vars" / "all"
+        self.assertTrue((leaf_all / "atlas-compute-provision.yml").is_file())
+        self.assertFalse((leaf_all / "atlas-node-foundation.yml").exists())
+        self.assertFalse((leaf_all / "atlas-node-foundation.secrets.yml").exists())
+        self.assertFalse((leaf_all / "atlas-compute-provision.secrets.yml").exists())
+
+        marker = env_default / "group_vars" / "all" / "atlas-compute-provision.yml"
+        original = marker.read_text(encoding="utf-8")
+        marker.write_text(original + "\n# env-policy-marker\n", encoding="utf-8")
+
+        second = init_cluster(
+            self.root,
+            "lab/bar",
+            options=InitOptions(template_name="pve_templates", validate=False),
+        )
+        self.assertTrue(second.is_dir())
+        self.assertIn("# env-policy-marker", marker.read_text(encoding="utf-8"))
+
+    def test_init_force_leaf_does_not_clobber_env_default(self) -> None:
+        self._seed_pve_and_env_templates()
+        init_cluster(
+            self.root,
+            "lab/foo",
+            options=InitOptions(template_name="pve_templates", validate=False),
+        )
+        marker = (
+            self.root
+            / "clusters"
+            / "lab"
+            / "default"
+            / "group_vars"
+            / "all"
+            / "atlas-compute-provision.yml"
+        )
+        marker.write_text(
+            marker.read_text(encoding="utf-8") + "\n# keep-me\n",
+            encoding="utf-8",
+        )
+        init_cluster(
+            self.root,
+            "lab/foo",
+            options=InitOptions(
+                template_name="pve_templates",
+                validate=False,
+                force=True,
+            ),
+        )
+        self.assertIn("# keep-me", marker.read_text(encoding="utf-8"))
+
+    def test_init_flat_id_does_not_seed_env_default(self) -> None:
+        self._seed_pve_and_env_templates()
+        target = init_cluster(
+            self.root,
+            "mylab",
+            options=InitOptions(template_name="pve_templates", validate=False),
+        )
+        self.assertEqual(target, self.root / "clusters" / "mylab")
+        self.assertFalse((target / "default").exists())
+        self.assertFalse((self.root / "clusters" / "mylab" / "default").exists())
 
     def test_init_options_and_cli_have_no_domain_prefix(self) -> None:
         from dataclasses import fields

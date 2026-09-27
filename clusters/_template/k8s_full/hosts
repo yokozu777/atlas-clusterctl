@@ -2,7 +2,7 @@ all:
   children:
     k8s_lbs:
       hosts:
-        192.168.1.240:
+        192.168.1.220:
           hostname: lb1.example.com
           provision:
             vmid: '220'
@@ -15,7 +15,7 @@ all:
             - size: '70'
               slot: 0
               storage: local-zfs
-        192.168.1.241:
+        192.168.1.221:
           hostname: lb2.example.com
           provision:
             vmid: '221'
@@ -30,7 +30,7 @@ all:
               storage: local-zfs
     k8s_masters:
       hosts:
-        192.168.1.242:
+        192.168.1.225:
           hostname: kubemaster01.example.com
           provision:
             vmid: '225'
@@ -43,7 +43,7 @@ all:
             - size: '70'
               slot: 0
               storage: local-zfs
-        192.168.1.243:
+        192.168.1.226:
           hostname: kubemaster02.example.com
           provision:
             vmid: '226'
@@ -56,7 +56,7 @@ all:
             - size: '70'
               slot: 0
               storage: local-zfs
-        192.168.1.244:
+        192.168.1.227:
           hostname: kubemaster03.example.com
           provision:
             vmid: '227'
@@ -71,7 +71,7 @@ all:
               storage: local-zfs
     k8s_workers:
       hosts:
-        192.168.1.245:
+        192.168.1.233:
           hostname: kubeworker02.example.com
           provision:
             vmid: '233'
@@ -89,7 +89,7 @@ all:
               storage: local-zfs
               wwn: '0x5000c500c35cd233'
               serial: drive233
-        192.168.1.246:
+        192.168.1.234:
           hostname: kubeworker03.example.com
           provision:
             vmid: '234'
@@ -107,7 +107,7 @@ all:
               storage: local-zfs
               wwn: '0x5000c500c35cd234'
               serial: drive234
-        192.168.1.247:
+        192.168.1.236:
           hostname: kubeworker06.example.com
           provision:
             vmid: '236'

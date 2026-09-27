@@ -27,12 +27,12 @@ redis_cluster_create_mode: auto
 # Redis source tarball for controller build (role 200_redis_node).
 # Optional HTTP(S) mirror — overrides GitHub when set (lab SoT; not a sibling default):
 # redis_download_mirror_url: "https://mirror.example.com/redis/redis-{{ redis_version }}.tar.gz"
-redis_download_mirror_url: ''
+redis_download_mirror_url: "https://example.com/images/8.8.0.tar.gz"
 redis_download_use_github_proxy: false
-redis_download_github_proxy: ''
+redis_download_github_proxy: "192.168.1.212:9119"
 
 # Must match lab_plan.yml / README VIP
-vip_address: "192.168.1.250"
+vip_address: "192.168.1.130"
 # Mixed OS: Ubuntu/Debian Proxmox guests use ens18; oracle-base uses eth0.
 # Leave empty so 203_redis_lb picks ansible_default_ipv4.interface per host.
 vip_interface: ""

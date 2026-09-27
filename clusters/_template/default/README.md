@@ -10,8 +10,12 @@ and not a substitute for:
 Regenerate:
 
 ```bash
-python3 -m clusterctl.tools.export_template --from <lab-id> --template default --flatten-cascade
+python3 -m clusterctl.tools.export_template --from dev/default --template default
 ```
+
+Init of ``<env>/<name>`` copies this tree to ``clusters/<env>/default/`` when
+that env-policy directory does not exist yet. Do not use ``--flatten-cascade``
+here — shared knobs stay on this layer, stack leaves stay thin.
 
 # Dev environment policy
 

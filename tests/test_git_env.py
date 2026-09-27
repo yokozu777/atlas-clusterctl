@@ -8,6 +8,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from clusterctl.git_ssh import (
+    _STAGED_IDENTITIES,
+    ensure_openssh_private_key,
+    normalize_openssh_private_key_bytes,
+)
 from clusterctl.playbooks_config import PlaybookRepoSpec
 from clusterctl.playbooks_sync import (
     playbooks_ssh_key_env_name,
@@ -26,6 +31,7 @@ class GitEnvTest(unittest.TestCase):
         for key in self._ENV_KEYS:
             os.environ.pop(key, None)
         os.environ["ATLAS_CLUSTERCTL_CONFIG"] = str(self.root / "missing.yaml")
+        _STAGED_IDENTITIES.clear()
 
     def tearDown(self) -> None:
         for key, value in self._saved.items():
@@ -66,6 +72,7 @@ class GitEnvTest(unittest.TestCase):
     def test_config_git_ssh_key_before_env_ssh_key(self) -> None:
         key = self.root / "config.key"
         key.write_text("dummy\n", encoding="utf-8")
+        key.chmod(0o600)
         with mock.patch(
             "clusterctl.repo_sync_git.git_ssh_key_from_user_config",
             return_value=key,
@@ -73,6 +80,73 @@ class GitEnvTest(unittest.TestCase):
             env = git_env({"SSH_KEY": "/env/key"})
         self.assertIn(str(key), env["GIT_SSH_COMMAND"])
         self.assertNotIn("/env/key", env["GIT_SSH_COMMAND"])
+
+    def test_stages_world_readable_ssh_key(self) -> None:
+        key = self.root / "id_rsa"
+        key.write_text("dummy\n", encoding="utf-8")
+        key.chmod(0o777)
+        env = git_env({"SSH_KEY": str(key)})
+        cmd = env["GIT_SSH_COMMAND"]
+        self.assertNotIn(str(key), cmd)
+        self.assertIn("-i ", cmd)
+        ident = cmd.split("-i ", 1)[1].split()[0]
+        self.assertEqual(Path(ident).stat().st_mode & 0o777, 0o600)
+        self.assertEqual(Path(ident).read_text(encoding="utf-8"), "dummy\n")
+
+    def test_leaves_mode_600_unix_key(self) -> None:
+        key = self.root / "id_rsa"
+        key.write_text("dummy\n", encoding="utf-8")
+        key.chmod(0o600)
+        env = git_env({"SSH_KEY": str(key)})
+        self.assertIn(str(key), env["GIT_SSH_COMMAND"])
+
+    def test_stages_crlf_key_even_when_mode_600(self) -> None:
+        payload = (
+            b"-----BEGIN OPENSSH PRIVATE KEY-----\r\n"
+            b"dummy\r\n"
+            b"-----END OPENSSH PRIVATE KEY-----\r\n"
+        )
+        key = self.root / "id_rsa"
+        key.write_bytes(payload)
+        key.chmod(0o600)
+        env = git_env({"SSH_KEY": str(key)})
+        cmd = env["GIT_SSH_COMMAND"]
+        self.assertNotIn(str(key), cmd)
+        ident = cmd.split("-i ", 1)[1].split()[0]
+        self.assertEqual(Path(ident).stat().st_mode & 0o777, 0o600)
+        self.assertEqual(
+            Path(ident).read_bytes(),
+            b"-----BEGIN OPENSSH PRIVATE KEY-----\n"
+            b"dummy\n"
+            b"-----END OPENSSH PRIVATE KEY-----\n",
+        )
+
+
+class NormalizeOpensshPrivateKeyTest(unittest.TestCase):
+    def test_strips_utf8_bom_and_crlf(self) -> None:
+        raw = b"\xef\xbb\xbf-----BEGIN OPENSSH PRIVATE KEY-----\r\nfoo\r\n"
+        self.assertEqual(
+            normalize_openssh_private_key_bytes(raw),
+            b"-----BEGIN OPENSSH PRIVATE KEY-----\nfoo\n",
+        )
+
+    def test_decodes_utf16_le_bom(self) -> None:
+        text = "-----BEGIN OPENSSH PRIVATE KEY-----\nfoo\n"
+        raw = text.encode("utf-16")
+        self.assertEqual(normalize_openssh_private_key_bytes(raw), text.encode("utf-8"))
+
+    def test_ensure_normalizes_world_readable_crlf(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            key = Path(raw) / "id_rsa"
+            key.write_bytes(b"-----BEGIN OPENSSH PRIVATE KEY-----\r\ndummy\r\n")
+            key.chmod(0o777)
+            staged = Path(ensure_openssh_private_key(str(key)))
+            self.assertNotEqual(staged, key)
+            self.assertEqual(
+                staged.read_bytes(),
+                b"-----BEGIN OPENSSH PRIVATE KEY-----\ndummy\n",
+            )
+            self.assertEqual(staged.stat().st_mode & 0o777, 0o600)
 
 
 class PlaybooksSshKeyEnvTest(unittest.TestCase):

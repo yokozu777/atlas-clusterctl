@@ -33,9 +33,9 @@ Then:
 1. Edit `hosts` (IPs / hostnames).
 2. Confirm Leaf DNS: `--dns-suffix` sets the shared suffix; `cluster_domain` keeps the
    `k8s.` template prefix unless you edit `atlas-*.yml`.
-3. Fill product secrets overlays (Vault recommended):
-   `atlas-compute-provision.secrets.yml`, `atlas-node-foundation.secrets.yml`,
-   `atlas-k8s-core.secrets.yml`, `atlas-k8s-addons.secrets.yml`.
+3. Fill product secrets overlays (Vault recommended): compute-provision and
+   node-foundation secrets live on ``<env>/default``; this leaf has
+   `atlas-k8s-core.secrets.yml` and `atlas-k8s-addons.secrets.yml`.
 4. Set `dns_server_ip` / NTP / DNS to your infra_edge (or lab) BIND.
 5. Set `execution.image` / `execution.tag` if needed (default: [`yokozu/krang:latest`](https://hub.docker.com/r/yokozu/krang) — build from [infrastructure-automation-toolkit](https://github.com/yokozu777/infrastructure-automation-toolkit)).
 6. Point playbook `url:` entries at your remotes (or keep `source: local` siblings).

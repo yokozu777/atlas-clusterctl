@@ -7,10 +7,26 @@
 # Leaf DNS identity
 # (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
 # Orchestration contract: docs/stacks/k8s-addons.md
-dns_domain_suffix: example.com
-cluster_domain: "k8s.{{ dns_domain_suffix }}"
+dns_domain_suffix: dev-mxhash.com # Public DNS suffix for this cluster
+cluster_domain: "k8s.{{ dns_domain_suffix }}" # Cluster FQDN, usually a name under the DNS suffix
 k8s_cluster_domain: "{{ cluster_domain }}"
-dns_server_ip: 192.168.1.53
+dns_server_ip: 192.168.1.219 # Address of the lab DNS server
+
+k8s_dns_domain: cluster.local # In-cluster DNS domain, usually cluster.local
+k8s_lb_hostname: kubelb # Short hostname of the API load balancer
+k8s_api_port: 6443 # Kubernetes API port on the load balancer
+vip_address: 192.168.1.210 # Keepalived VIP for the API server
+pod_subnet: 172.16.0.0/16 # Pod CIDR passed to kubeadm
+cluster_dns_ip: 10.0.0.10 # kube-dns address inside the service CIDR
+k8s_cluster_name: kubernetes # kubeadm cluster name
+ansible_user: localuser # SSH user Ansible uses on the nodes
+k8s_master_hosts: k8s_masters # Inventory group of control-plane nodes
+k8s_worker_hosts: k8s_workers # Inventory group of worker nodes
+use_internal_helm_repo: nginx # Helm mirror mode: none, nginx, or nexus
+setup_helm_repo_nginx: true # Deploy the Helm repo nginx mirror when on
+nexus_host: nexus.mxhash.com # Nexus hostname for internal charts and packages
+helm_repo_nginx_ingress_domain: "helm.{{ dns_domain_suffix }}" # Domain of the Helm chart mirror
+setup_custom_nginx: true # Deploy custom content nginx when on
 
 debug_tooling_install_dir: /usr/local/bin
 debug_tooling_staging_dir: /var/tmp/ansible-debug-tooling
@@ -28,7 +44,7 @@ debug_tooling_binary_source: infra
 debug_tooling_binary_infra_base: "https://releases.{{ helm_repo_nginx_ingress_domain }}"
 
 # --- 210_helm_bootstrap (atlas-k8s-addons) ---
-helm_version: https://get.helm.sh/helm-v4.2.1-linux-amd64.tar.gz
+helm_version: https://get.helm.sh/helm-v4.2.1-linux-amd64.tar.gz # URL of the Helm binary archive
 # nginx hostname: <helm_repos.name>.helm.<dns_domain_suffix> (filter helm_repo_client_url)
 helm_repo_upstreams:
   - { name: oauth2-proxy, nexus_path: oauth2-proxy, upstream_url: "https://oauth2-proxy.github.io/manifests", upstream_host: oauth2-proxy.github.io }
@@ -238,7 +254,7 @@ thanos_receive_remote_write_url: "http://thanos-receive.{{ monitoring_namespace 
 metallb_namespace: metallb-system
 metallb_chart_version: "0.16.1"
 metallb_chart_state: present
-metallb_ip_pool: "192.168.1.150-192.168.1.199"
+metallb_ip_pool: "192.168.1.150-192.168.1.199" # Address range MetalLB hands out
 
 # --- 520_envoy_gateway ---
 envoy_gateway_namespace: envoy-gateway-system
@@ -274,7 +290,7 @@ trust_manager_chart_state: present
 
 # --- 560_apply_ingress ---
 # (jaeger:16686, falco-falcosidekick-ui:2802, chaos-dashboard:2333).
-keycloak_realm: example
+keycloak_realm: mxhash
 falco_host: "falco.{{ k8s_cluster_domain }}"
 jaeger_host: "jaeger.{{ k8s_cluster_domain }}"
 kiali_host: "kiali.{{ k8s_cluster_domain }}"
@@ -298,7 +314,7 @@ keycloak_host: "keycloak.{{ k8s_cluster_domain }}"
 keycloak_url: "https://{{ keycloak_host }}"
 oidc_issuer_url: "{{ keycloak_url }}/auth/realms/{{ keycloak_realm }}"
 # Enable only — issuer is oidc_issuer_url; client_id/ca_file from addons role 940 defaults
-kube_apiserver_oidc_enabled: true
+kube_apiserver_oidc_enabled: true # Enable OIDC on the API server when on
 oauth2_host: "oauth2.{{ k8s_cluster_domain }}"
 oauth2_callback_url: "https://{{ oauth2_host }}/oauth2/callback"
 oauth2_signout_url: "https://{{ oauth2_host }}/oauth2/sign_out"

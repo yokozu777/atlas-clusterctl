@@ -69,6 +69,7 @@ class EnableGitSshTest(unittest.TestCase):
             os.environ.pop(key, None)
         key = self.root / "id_rsa"
         key.write_text("dummy\n", encoding="utf-8")
+        key.chmod(0o600)
         self.key = key
 
     def tearDown(self) -> None:
@@ -104,6 +105,7 @@ class EnableGitSshTest(unittest.TestCase):
     def test_prefers_tfstate_ssh_key(self) -> None:
         tfstate = self.root / "tfstate_id_rsa"
         tfstate.write_text("tf\n", encoding="utf-8")
+        tfstate.chmod(0o600)
         os.environ.pop("GIT_SSH_COMMAND", None)
         os.environ["SSH_KEY"] = str(self.key)
         os.environ["TFSTATE_SSH_KEY"] = str(tfstate)
@@ -130,6 +132,16 @@ class EnableGitSshTest(unittest.TestCase):
         printed.assert_called()
         self.assertIn("GIT_SSH_COMMAND", printed.call_args[0][0])
         self.assertEqual(os.environ["GIT_SSH_COMMAND"], docker_cmd)
+
+    def test_stages_unprotected_identity_file(self) -> None:
+        self.key.chmod(0o777)
+        os.environ["SSH_KEY"] = str(self.key)
+        runner = self._runner()
+        runner._enable_git_ssh()
+        cmd = os.environ["GIT_SSH_COMMAND"]
+        self.assertNotIn(str(self.key), cmd)
+        ident = cmd.split("-i ", 1)[1].split()[0]
+        self.assertEqual(Path(ident).stat().st_mode & 0o777, 0o600)
 
 
 if __name__ == "__main__":

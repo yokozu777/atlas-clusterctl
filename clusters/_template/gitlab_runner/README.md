@@ -17,8 +17,8 @@ Product pair (copy/align with sibling `atlas-gitlab-runner`):
 ```
 
 Then edit `hosts`, fill `atlas-gitlab-runner.secrets.yml` (`gitlab_runner_authentication_token`),
-set `gitlab_url` / executor / CA paths in `atlas-gitlab-runner.yml`, and provision secrets in
-`atlas-compute-provision.secrets.yml`.
+set `gitlab_url` / executor / CA paths in `atlas-gitlab-runner.yml`. Compute-provision
+secrets live on ``<env>/default``.
 
 Leaf DNS: `--dns-suffix` sets the shared suffix; `cluster_domain` keeps the
 `gitlab-runner.` template prefix unless you edit `atlas-*.yml`.

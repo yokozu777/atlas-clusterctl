@@ -322,8 +322,8 @@ services_to_disable: []
 # Variables for role 11_certificates
 # ============================================
 
-harbor_host: harbor.example.com
-nexus_host: nexus.example.com
+harbor_host: harbor.example.com # Harbor hostname for internal images
+nexus_host: nexus.example.com # Nexus hostname for internal charts and packages
 
 # Enable certificate configuration
 # Default: false (certificates not configured)
@@ -334,12 +334,7 @@ certificates_configure: true
 # Filename per URL: <hostname with dots→dashes>.crt
 #   https://ca.example.com:8443/roots.pem → ca-example-com.crt
 pki_ca_url:
-  - "https://ca.example.com:8443/roots.pem"
-  - "https://ca.example.com:8443/roots.pem"
-# Example list:
-# pki_ca_url:
-#   - "https://ca.dev.example.com:8443/roots.pem"
-#   - "https://ca.example.com:8443/roots.pem"
+  - "https://ca.{{ dns_domain_suffix }}:8443/roots.pem"
 
 # Verify TLS when downloading pki_ca_url (false for private step-ca bootstrap).
 ca_certificate_validate_certs: false
@@ -367,7 +362,7 @@ ntp_manage_host_chrony: true
 # Format: list of IPs or hostnames
 # Example: ["192.168.1.1", "pool.ntp.org"]
 ntp_servers:
-  - 192.168.1.53
+  - 192.168.1.219
 
 # Wait after enabling NTP before offset check
 ntp_sync_settle_seconds: 10
@@ -502,7 +497,7 @@ node_foundation_network_serial: "100%"
 network_interfaces: []
 
 # Default DNS for resolv.conf and .network when item.dns is empty
-dns_servers: ["192.168.1.53"]
+dns_servers: ["192.168.1.219"]
 
 # Fallback default gateway when runtime discovery returns empty (typical lab /24)
 network_default_gateway: "192.168.1.1"

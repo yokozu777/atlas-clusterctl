@@ -2,7 +2,7 @@ all:
   children:
     gitlab_runners:
       hosts:
-        192.168.1.240:
+        192.168.1.110:
           hostname: gitlab-runner01.example.com
           provision:
             vmid: "5300"
@@ -15,7 +15,7 @@ all:
               - size: "100"
                 slot: 0
                 storage: local-zfs
-        192.168.1.241:
+        192.168.1.111:
           hostname: gitlab-runner02.example.com
           provision:
             vmid: "5301"
@@ -28,7 +28,7 @@ all:
               - size: "100"
                 slot: 0
                 storage: local-zfs
-        192.168.1.242:
+        192.168.1.112:
           hostname: gitlab-runner03.example.com
           provision:
             vmid: "5302"

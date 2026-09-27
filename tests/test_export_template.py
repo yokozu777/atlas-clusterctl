@@ -195,6 +195,10 @@ class ExportTemplateMultiStackTest(unittest.TestCase):
                 "url: git@github.com:yokozu777/atlas-redis.git",
                 text,
             )
+            self.assertIn("source: git", text)
+            self.assertIn("sync: always", text)
+            self.assertNotIn("source: local", text)
+            self.assertNotIn("sync: never", text)
             self.assertNotIn("gitea.example.com", text)
             self.assertNotIn("git@example.com:org/", text)
 
@@ -225,9 +229,39 @@ class ExportTemplateMultiStackTest(unittest.TestCase):
             self.assertNotIn("mode: local", text)
             self.assertNotIn("337", text)
 
+    def test_public_templates_playbooks_sync_always(self) -> None:
+        root = Path(__file__).resolve().parents[1] / "clusters" / "_template"
+        found = 0
+        for path in sorted(root.glob("*/cluster.yaml")):
+            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+            playbooks = data.get("playbooks")
+            if not isinstance(playbooks, dict):
+                continue
+            for name, spec in playbooks.items():
+                if not isinstance(spec, dict):
+                    continue
+                found += 1
+                self.assertEqual(
+                    spec.get("sync"),
+                    "always",
+                    f"{path.parent.name}/{name}",
+                )
+                self.assertEqual(
+                    spec.get("source"),
+                    "git",
+                    f"{path.parent.name}/{name}",
+                )
+        self.assertGreater(found, 0)
+
     def test_public_templates_execution_is_docker_latest(self) -> None:
         root = Path(__file__).resolve().parents[1] / "clusters" / "_template"
-        paths = [root / "cluster.yaml", *sorted(root.glob("*/cluster.yaml"))]
+        # Named stack scaffolds only. Parent ``_template/cluster.yaml`` is the
+        # empty scaffold (out of scope for export); ``default`` is env-policy.
+        paths = [
+            path
+            for path in sorted(root.glob("*/cluster.yaml"))
+            if path.parent.name != "default"
+        ]
         checked = 0
         for path in paths:
             data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}

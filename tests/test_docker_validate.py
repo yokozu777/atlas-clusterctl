@@ -12,14 +12,21 @@ from unittest import mock
 import yaml
 
 from clusterctl.context import ClusterContext
-from clusterctl.docker_executor import DOCKER_WORKSPACE_ANSIBLE_ENV_KEYS, build_container_env
+from clusterctl.docker_executor import (
+    CONTAINER_ASYNC_DIR,
+    CONTAINER_HOME,
+    DOCKER_WORKSPACE_ANSIBLE_ENV_KEYS,
+    build_container_env,
+)
 from clusterctl.docker_validate import (
     DockerValidateOptions,
     check_docker_playbooks_host,
     check_docker_workspace_ansible_host,
+    cmd_docker_pull,
     validate_docker_deep,
     verify_container_mounts,
 )
+from clusterctl.exceptions import ClusterctlError
 from clusterctl.pipeline_fixture import local_playbooks_override_block, seed_org_baseline_fixture
 from clusterctl.workspace_paths import container_controller_ansible_tmp_dir
 
@@ -153,6 +160,8 @@ class DockerValidateTest(unittest.TestCase):
         )
         self.assertEqual(env["ANSIBLE_LOCAL_TEMP"], str(container_tmp))
         self.assertEqual(env["TMPDIR"], str(container_tmp))
+        self.assertEqual(env["HOME"], CONTAINER_HOME)
+        self.assertEqual(env["ANSIBLE_ASYNC_DIR"], CONTAINER_ASYNC_DIR)
         for key in DOCKER_WORKSPACE_ANSIBLE_ENV_KEYS:
             self.assertIn(key, env)
         self.assertIn("/tmp/atlas-ssh/id_rsa", env["GIT_SSH_COMMAND"])
@@ -217,6 +226,38 @@ class DockerValidateTest(unittest.TestCase):
         checks = validate_docker_deep(self._ctx(), options=opts)
         pull.assert_not_called()
         self.assertTrue(any(check.code == "execution_docker_smoke" for check in checks))
+
+    @mock.patch("clusterctl.docker_validate.docker_pull_image", return_value=(True, "Digest: sha256:abc"))
+    def test_cmd_docker_pull(self, pull: mock.Mock) -> None:
+        code = cmd_docker_pull(self._ctx())
+        self.assertEqual(code, 0)
+        pull.assert_called_once_with(
+            "reg.example.com/library/cluster-executor:1",
+            timeout_sec=600,
+        )
+
+    @mock.patch("clusterctl.docker_validate.docker_pull_image", return_value=(False, "denied"))
+    def test_cmd_docker_pull_failure(self, _pull: mock.Mock) -> None:
+        with self.assertRaises(ClusterctlError) as ctx:
+            cmd_docker_pull(self._ctx())
+        self.assertIn("denied", str(ctx.exception))
+
+    def test_cmd_docker_pull_local_mode(self) -> None:
+        cluster_yaml = self.root / "clusters" / "lab" / "cluster.yaml"
+        data = yaml.safe_load(cluster_yaml.read_text(encoding="utf-8"))
+        data["execution"] = {"mode": "local"}
+        cluster_yaml.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+        with self.assertRaises(ClusterctlError) as ctx:
+            cmd_docker_pull(self._ctx())
+        self.assertIn("not docker", str(ctx.exception))
+
+    def test_cli_parses_docker_pull(self) -> None:
+        from clusterctl.__main__ import _build_parser
+
+        parsed = _build_parser().parse_args(["--cluster", "lab", "docker", "pull"])
+        self.assertEqual(parsed.command, "docker")
+        self.assertEqual(parsed.docker_command, "pull")
+        self.assertEqual(parsed.cluster, "lab")
 
 
 if __name__ == "__main__":

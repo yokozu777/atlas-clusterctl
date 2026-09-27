@@ -1,5 +1,5 @@
 # Public scaffold ``_template/k8s_full`` (exported from ``dev/k8s``).
-# Regenerate: python3 -m clusterctl.tools.export_template --from dev/k8s --template k8s_full --flatten-cascade
+# Regenerate: python3 -m clusterctl.tools.export_template --from dev/k8s --template k8s_full
 # Init: ./cluster init <env>/<name> --template k8s_full
 #
 # Scrub live hostnames / secrets before committing the public template.
@@ -14,11 +14,11 @@ id: ''
 display_name: null
 playbooks:
   atlas-compute-provision:
-    source: local
+    source: git
     layout: roles/
     shallow: true
-    sync: never
-    url: git@github.com:yokozu777/atlas-compute-provision.git
+    sync: always
+    url: git@gitea.mxhash.com:root/atlas-compute-provision.git
     ref: main
     entries:
       templates:
@@ -54,11 +54,11 @@ playbooks:
     path: atlas-compute-provision
     path_relative_to: sibling
   atlas-node-foundation:
-    source: local
+    source: git
     layout: roles/
     shallow: true
-    sync: never
-    url: git@github.com:yokozu777/atlas-node-foundation.git
+    sync: always
+    url: git@gitea.mxhash.com:root/atlas-node-foundation.git
     ref: main
     entries:
       init:
@@ -143,14 +143,14 @@ playbooks:
     path: atlas-node-foundation
     path_relative_to: sibling
   atlas-k8s-core:
-    source: local
+    source: git
     layout: roles/
     readiness_markers:
     - 00_controller_tooling
     - 29_fetch_kubeconfig
     shallow: true
-    sync: never
-    url: git@github.com:yokozu777/atlas-k8s-core.git
+    sync: always
+    url: git@gitea.mxhash.com:root/atlas-k8s-core.git
     ref: main
     entries:
       cluster:
@@ -188,7 +188,7 @@ playbooks:
     path: atlas-k8s-core
     path_relative_to: sibling
   atlas-k8s-addons:
-    source: local
+    source: git
     layout: roles/
     readiness_markers:
     - 120_controller_tooling
@@ -197,8 +197,8 @@ playbooks:
     - 310_prometheus
     - 520_envoy_gateway
     shallow: true
-    sync: never
-    url: git@github.com:yokozu777/atlas-k8s-addons.git
+    sync: always
+    url: git@gitea.mxhash.com:root/atlas-k8s-addons.git
     ref: main
     entries:
       addons:
@@ -277,7 +277,7 @@ phases:
 - k8s-addons: atlas-k8s-addons/addons
 execution:
   mode: docker
-  image: yokozu/krang
+  image: harbor.mxhash.com/library/krang
   tag: latest
 cluster_id_aliases: {}
 inventory: hosts

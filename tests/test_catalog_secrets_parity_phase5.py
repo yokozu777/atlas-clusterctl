@@ -24,6 +24,7 @@ from tests.catalog_parity import (
     product_pair_keys,
     sibling_all_dir,
     sibling_present,
+    template_cascade_pair_keys,
 )
 from tests.lab_support import lab_exists, lab_leaf, lab_id_for, lab_path_for, skip_unless_stack
 
@@ -40,7 +41,7 @@ class CatalogSecretsParityPhase5Test(unittest.TestCase):
                     missing_siblings.append(product)
                     continue
                 _s_cat, _s_sec, s_all = product_pair_keys(sibling_all_dir(product), product)
-                _t_cat, _t_sec, t_all = product_pair_keys(tmpl_dir, product)
+                _t_cat, _t_sec, t_all = template_cascade_pair_keys(leaf, product)
                 stack_arg = stack if product == "atlas-compute-provision" else None
                 s_par = parity_keys(s_all, stack=stack_arg)
                 t_par = parity_keys(t_all, stack=stack_arg)
@@ -63,16 +64,17 @@ class CatalogSecretsParityPhase5Test(unittest.TestCase):
         for leaf, products in LEAF_PRODUCTS.items():
             all_dir = TEMPLATE_ROOT / leaf / "group_vars" / "all"
             for product in products:
-                cat, sec, _ = product_pair_keys(all_dir, product)
+                cat, _leaf_sec, _ = product_pair_keys(all_dir, product)
                 leaks = assert_no_forbidden_secrets(cat, product)
                 self.assertEqual(
                     leaks, [], f"_template/{leaf}/{product}: secrets in catalog: {leaks}"
                 )
+                _c, sec, _ = template_cascade_pair_keys(leaf, product)
                 for key in SECRET_REQUIRED_IN_SECRETS.get(product, ()):
                     self.assertIn(
                         key,
                         sec,
-                        f"_template/{leaf}/{product}.secrets.yml missing {key}",
+                        f"_template/{leaf}+default/{product}.secrets.yml missing {key}",
                     )
 
     def test_sibling_secrets_placement(self) -> None:
@@ -116,15 +118,25 @@ class CatalogSecretsParityPhase5Test(unittest.TestCase):
             ) or {}
             playbooks = cluster_yaml.get("playbooks") or {}
             playbook_keys = set(playbooks) if isinstance(playbooks, dict) else set()
+            compute = playbooks.get("atlas-compute-provision") if isinstance(playbooks, dict) else None
+            compute_entries = (
+                compute.get("entries") if isinstance(compute, dict) else None
+            )
+            pve_factory = isinstance(compute_entries, dict) and (
+                "templates" in compute_entries and "provision" not in compute_entries
+            )
             cascade = cascade_group_vars_dirs(croot, lab_id)
             merged = load_cluster_vars(leaf, cascade_dirs=cascade)
             # Thin infra-edge bridge on k8s leaves has overlay but no playbooks entry.
+            # PVE factory leaves may still carry a leftover node-foundation overlay;
+            # env-policy owns that product.
             products_for_playbooks = [
                 p
                 for p in products
                 if not (
                     p == "atlas-infra-edge" and "infra_platform_hosts" not in merged
                 )
+                and not (pve_factory and p == "atlas-node-foundation")
             ]
             missing_playbooks = sorted(set(products_for_playbooks) - playbook_keys)
             self.assertEqual(
@@ -134,6 +146,8 @@ class CatalogSecretsParityPhase5Test(unittest.TestCase):
             )
 
             for product in products:
+                if pve_factory and product == "atlas-node-foundation":
+                    continue
                 cat_path = all_dir / f"{product}.yml"
                 sec_path = all_dir / f"{product}.secrets.yml"
                 self.assertTrue(cat_path.is_file(), cat_path)
@@ -184,7 +198,7 @@ class CatalogSecretsParityPhase5Test(unittest.TestCase):
                     f"{lab_id}/{product}: must-add missing in cascade: {missing}",
                 )
 
-            if "atlas-node-foundation" in products:
+            if "atlas-node-foundation" in products and not pve_factory:
                 self.assertTrue(
                     foundation_repo_surface_ok(merged),
                     f"{lab_id}: cascade needs non-empty pkg_repos and/or "

@@ -59,7 +59,8 @@ inside a single tree. There is no `--clusters-root` alias (removed in Phase 4).
 2. Copy the **full leaf tree** (not only `hosts` / `group_vars` / `pub_keys`).
    Keep an existing non-empty public `README.md`. Optional `--flatten-cascade`
    merges org→env→leaf `group_vars/all` by top-level YAML blocks (comments travel
-   with the winning block).
+   with the winning block). Public stack scaffolds omit flatten: env knobs stay
+   on `_template/default`, leaves stay thin like `clusters/dev/*`.
 3. Write `cluster.yaml` as source text plus a header (`id: ""`, `display_name: null`,
    drop `deployable`; playbook `url:` → `git@github.com:yokozu777/<repo>.git`;
    neutralize execution image). Parent

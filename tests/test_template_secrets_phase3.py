@@ -15,10 +15,13 @@ LEAF_PRODUCTS = {
     "kafka": ("atlas-kafka", "atlas-compute-provision", "atlas-node-foundation"),
     "postgresql": ("atlas-postgresql", "atlas-compute-provision", "atlas-node-foundation"),
     "jenkins_agent": ("atlas-jenkins-agent", "atlas-compute-provision", "atlas-node-foundation"),
+    "gitlab_runner": ("atlas-gitlab-runner", "atlas-compute-provision", "atlas-node-foundation"),
     "infra_edge": ("atlas-infra-edge", "atlas-compute-provision", "atlas-node-foundation"),
     "k8s_full": ("atlas-k8s-core", "atlas-k8s-addons", "atlas-compute-provision", "atlas-node-foundation"),
     "pve_templates": ("atlas-compute-provision",),
 }
+
+DEFAULT_DIR = TEMPLATE / "default" / "group_vars" / "all"
 
 SECRET_FORBIDDEN_IN_CATALOG = {
     "atlas-redis": ("vip_auth_pass", "redis_requirepass"),
@@ -47,17 +50,30 @@ class TemplateSecretsPhase3Test(unittest.TestCase):
             all_dir = TEMPLATE / leaf / "group_vars" / "all"
             for product in products:
                 cat = all_dir / f"{product}.yml"
-                sec = all_dir / f"{product}.secrets.yml"
                 self.assertTrue(cat.is_file(), cat)
-                self.assertTrue(sec.is_file(), sec)
                 catalog = cat.read_text(encoding="utf-8")
-                secrets = sec.read_text(encoding="utf-8")
                 catalog_keys = set(yaml.safe_load(catalog) or {})
-                secrets_keys = set(yaml.safe_load(secrets) or {})
+                sec_leaf = all_dir / f"{product}.secrets.yml"
+                sec_default = DEFAULT_DIR / f"{product}.secrets.yml"
+                secrets_keys: set[str] = set()
+                if sec_leaf.is_file():
+                    secrets_keys |= set(yaml.safe_load(sec_leaf.read_text(encoding="utf-8")) or {})
+                if sec_default.is_file():
+                    secrets_keys |= set(
+                        yaml.safe_load(sec_default.read_text(encoding="utf-8")) or {}
+                    )
+                self.assertTrue(
+                    secrets_keys or sec_leaf.is_file() or sec_default.is_file(),
+                    f"{leaf}/{product}: secrets overlay missing on leaf and _template/default",
+                )
                 for key in SECRET_FORBIDDEN_IN_CATALOG.get(product, ()):
                     self.assertNotIn(key, catalog_keys, f"{leaf}/{product}: {key} still in catalog")
                     if product != "atlas-kafka":
-                        self.assertIn(key, secrets_keys, f"{leaf}/{product}: {key} missing from secrets")
+                        self.assertIn(
+                            key,
+                            secrets_keys,
+                            f"{leaf}/{product}: {key} missing from leaf+_template/default secrets",
+                        )
 
 
 if __name__ == "__main__":

@@ -485,6 +485,17 @@ def product_pair_keys(all_dir: Path, product: str) -> tuple[set[str], set[str], 
     return cat, sec, cat | sec
 
 
+def template_cascade_pair_keys(
+    leaf: str, product: str
+) -> tuple[set[str], set[str], set[str]]:
+    """Leaf overlay plus ``_template/default`` env-policy keys for *product*."""
+    leaf_dir = TEMPLATE_ROOT / leaf / "group_vars" / "all"
+    default_dir = TEMPLATE_ROOT / "default" / "group_vars" / "all"
+    l_cat, l_sec, l_all = product_pair_keys(leaf_dir, product)
+    d_cat, d_sec, d_all = product_pair_keys(default_dir, product)
+    return l_cat | d_cat, l_sec | d_sec, l_all | d_all
+
+
 def sibling_all_dir(product: str) -> Path:
     return SIBLING_ROOT / product / "group_vars" / "all"
 

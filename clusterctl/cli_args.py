@@ -18,6 +18,7 @@ SUBCOMMANDS = frozenset(
         "smoke",
         "playbooks",
         "repos",
+        "docker",
         "limits",
         "vars",
     }

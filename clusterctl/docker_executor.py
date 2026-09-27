@@ -16,6 +16,7 @@ from pathlib import Path
 from clusterctl.cli_args import SUBCOMMANDS as CLUSTER_SUBCOMMANDS
 from clusterctl.cli_args import strip_global_flags_from_argv
 from clusterctl.context import ClusterContext
+from clusterctl.git_ssh import normalize_openssh_private_key_bytes
 from clusterctl.execution import (
     ENV_FORCE_LOCAL,
     check_ssh_key,
@@ -78,6 +79,9 @@ _USER_FORBIDDEN_MSG = (
 
 # Writable home inside the container (image often has /root only for UID 0).
 CONTAINER_HOME = "/tmp/clusterctl-home"
+# Absolute async jid dir — async_status expands ~ via passwd (/root for uid 0),
+# while poll:0 writes under HOME. Pin both to the same path.
+CONTAINER_ASYNC_DIR = f"{CONTAINER_HOME}/.ansible_async"
 # Fake NSS for arbitrary --user uid:gid (krang ≥336 ships this package).
 CONTAINER_NSS_WRAPPER_SO = "/usr/lib/libnss_wrapper.so"
 CONTAINER_NSS_USER = "clusterctl"
@@ -272,7 +276,7 @@ def prepare_container_ssh_key(
         staging = Path(tempfile.mkdtemp(prefix="atlas-ssh-", dir=str(parent)))
         staging.chmod(0o700)
         dest = staging / "id_rsa"
-        dest.write_bytes(source.read_bytes())
+        dest.write_bytes(normalize_openssh_private_key_bytes(source.read_bytes()))
         dest.chmod(0o600)
     except OSError as exc:
         if staging is not None:
@@ -677,6 +681,7 @@ def build_container_env(ctx: ClusterContext) -> dict[str, str]:
         "CLUSTER_WORKSPACE_ROOT": str(ws),
         ENV_FORCE_LOCAL: "1",
         "HOME": CONTAINER_HOME,
+        "ANSIBLE_ASYNC_DIR": CONTAINER_ASYNC_DIR,
         "SSH_KEY": CONTAINER_SSH_KEY,
         "ANSIBLE_PRIVATE_KEY_FILE": CONTAINER_SSH_KEY,
     }
@@ -767,13 +772,14 @@ def build_docker_run_command(
         str(container_controller_ansible_tmp_dir(ctx.workspace_id))
     )
     home_dir = shlex.quote(CONTAINER_HOME)
+    async_dir = shlex.quote(CONTAINER_ASYNC_DIR)
     nss_setup = container_nonroot_nss_preamble()
     cmd.extend(
         [
             "bash",
             "-lc",
             (
-                f"mkdir -p {controller_tmp} {home_dir} && "
+                f"mkdir -p {controller_tmp} {home_dir} {async_dir} && "
                 f"{nss_setup} && "
                 f"cd {workdir} && exec {inner_cmd_str}"
             ),

@@ -7,8 +7,7 @@ Maintainer-only (ADR 004). Operators consume scaffolds via::
 Usage::
 
     python3 -m clusterctl.tools.export_template --from <lab-id> --template redis
-    python3 -m clusterctl.tools.export_template --from <lab-id> --template k8s_full \\
-        --flatten-cascade
+    python3 -m clusterctl.tools.export_template --from dev/default --template default
 """
 
 from __future__ import annotations
@@ -534,15 +533,6 @@ def scrub_cluster_yaml_for_public_template(path: Path) -> bool:
                     )
                     i += 1
                     continue
-                field_value = _value.split(" #", 1)[0].strip().strip("'\"")
-                if field == "source" and field_value == "git":
-                    out.append(f"{indent}source: local\n")
-                    i += 1
-                    continue
-                if field == "sync" and field_value == "always":
-                    out.append(f"{indent}sync: never\n")
-                    i += 1
-                    continue
 
         if in_execution:
             indented = _INDENTED_KEY_RE.match(line.rstrip("\n"))
@@ -877,8 +867,8 @@ def main(argv: list[str] | None = None) -> int:
         "--flatten-cascade",
         action="store_true",
         help=(
-            "merge org→env→leaf group_vars/all into a self-contained scaffold "
-            "(use for thin inventory leaves that rely on <env>/default)"
+            "merge org→env→leaf group_vars/all into a self-contained scaffold. "
+            "Omit for public stack scaffolds: env knobs live on _template/default"
         ),
     )
     args = parser.parse_args(argv)

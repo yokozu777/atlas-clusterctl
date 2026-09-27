@@ -176,6 +176,11 @@ class SubcommandsParityTest(unittest.TestCase):
         argv = normalize_global_argv(["repos", "show", "--cluster", "lab/x"])
         self.assertEqual(argv, ["cluster", "--cluster", "lab/x", "repos", "show"])
 
+    def test_hoist_cluster_before_docker(self) -> None:
+        self.assertIn("docker", SUBCOMMANDS)
+        argv = normalize_global_argv(["docker", "pull", "--cluster", "lab/x"])
+        self.assertEqual(argv, ["cluster", "--cluster", "lab/x", "docker", "pull"])
+
 
 if __name__ == "__main__":
     unittest.main()
