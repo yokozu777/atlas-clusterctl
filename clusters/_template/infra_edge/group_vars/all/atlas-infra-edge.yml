@@ -956,8 +956,8 @@ infra_cache_seed_publish_include:
   pkg_repo: true
   custom_www: true
 infra_cache_seed_load_enabled: true # Load the cache seed image when on
-infra_cache_seed_load_image: "example.com/library/atlas-seed-cache" # Image that carries the cache seed
-infra_cache_seed_load_tag: "27-09-2026" # Tag of the cache seed image
+infra_cache_seed_load_image: "yokozu/atlas-seed-cache:19-08-2026" # Image that carries the cache seed
+infra_cache_seed_load_tag: "19-08-2026" # Tag of the cache seed image
 infra_cache_seed_load_include:
   registry: true
   helm_repo: true

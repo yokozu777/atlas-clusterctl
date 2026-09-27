@@ -17,7 +17,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: always
-    url: git@gitea.mxhash.com:root/atlas-compute-provision.git
+    url: https://github.com/yokozu777/atlas-compute-provision.git
     ref: main
     entries:
       templates:
@@ -38,7 +38,7 @@ phases:
   - templates: atlas-compute-provision/templates
 execution:
   mode: docker
-  image: harbor.mxhash.com/library/krang
+  image: yokozu/krang
   tag: latest
 inventory: hosts
 cluster_id_aliases: {}

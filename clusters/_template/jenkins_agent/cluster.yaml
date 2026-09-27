@@ -18,7 +18,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: always
-    url: git@gitea.mxhash.com:root/atlas-compute-provision.git
+    url: https://github.com/yokozu777/atlas-compute-provision.git
     ref: main
     entries:
       templates:
@@ -58,7 +58,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: always
-    url: git@gitea.mxhash.com:root/atlas-node-foundation.git
+    url: https://github.com/yokozu777/atlas-node-foundation.git
     ref: main
     entries:
       init:
@@ -106,7 +106,7 @@ playbooks:
     layout: roles/
     shallow: true
     sync: always
-    url: git@gitea.mxhash.com:root/atlas-jenkins-agent.git
+    url: https://github.com/yokozu777/atlas-jenkins-agent.git
     ref: main
     entries:
       agent:
@@ -128,7 +128,7 @@ phases:
 - jenkins-agent: atlas-jenkins-agent/agent
 execution:
   mode: docker
-  image: harbor.mxhash.com/library/krang
+  image: yokozu/krang
   tag: latest
 cluster_id_aliases: {}
 inventory: hosts

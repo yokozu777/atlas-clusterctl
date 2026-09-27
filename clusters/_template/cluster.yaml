@@ -12,6 +12,6 @@ inventory: hosts
 
 execution:
   mode: docker
-  image: harbor.mxhash.com/library/krang
+  image: yokozu/krang
   tag: latest
 
