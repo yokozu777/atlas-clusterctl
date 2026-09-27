@@ -7,8 +7,8 @@ all:
           provision:
             vmid: '219'
             sockets: 1
-            cores: 2
-            memory: 8096
+            cores: 4
+            memory: 12096
             numa: false
             clone: debian-base
             disks:

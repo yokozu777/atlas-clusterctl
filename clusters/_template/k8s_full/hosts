@@ -35,7 +35,7 @@ all:
           provision:
             vmid: '225'
             sockets: 1
-            cores: 2
+            cores: 4
             memory: 8096
             numa: false
             clone: debian-base
@@ -48,7 +48,7 @@ all:
           provision:
             vmid: '226'
             sockets: 1
-            cores: 2
+            cores: 4
             memory: 8096
             numa: false
             clone: ubuntu-base
@@ -61,7 +61,7 @@ all:
           provision:
             vmid: '227'
             sockets: 1
-            cores: 2
+            cores: 4
             memory: 8096
             numa: false
             clone: oracle-base
@@ -76,8 +76,8 @@ all:
           provision:
             vmid: '233'
             sockets: 1
-            cores: 3
-            memory: 17000
+            cores: 8
+            memory: 27000
             numa: false
             clone: debian-base
             disks:
@@ -94,8 +94,8 @@ all:
           provision:
             vmid: '234'
             sockets: 1
-            cores: 3
-            memory: 17000
+            cores: 8
+            memory: 27000
             numa: false
             clone: ubuntu-base
             disks:
@@ -112,8 +112,8 @@ all:
           provision:
             vmid: '236'
             sockets: 1
-            cores: 3
-            memory: 17000
+            cores: 8
+            memory: 27000
             numa: false
             clone: oracle-base
             disks:

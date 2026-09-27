@@ -796,6 +796,7 @@ helm_repo_tls_cron_minute: 30
 helm_repo_tls_cron_log_file: /var/log/helm-repo-tls-renew.log
 helm_repo_tls_cron_service_name: cron
 compose_systemd_helm_repo_nginx_unit_name: helm-repo-nginx-compose
+helm_repo_nginx_cache_warm_enabled: false # Download charts through the Helm mirror. Off when the cache seed already filled the disk.
 helm_repo_nginx_cache_warm_timeout: 7200
 # Platform charts to pull through helm-nginx before seed/bake (empty version = latest).
 helm_repo_cache_warm_specs:
@@ -956,8 +957,8 @@ infra_cache_seed_publish_include:
   pkg_repo: true
   custom_www: true
 infra_cache_seed_load_enabled: true # Load the cache seed image when on
-infra_cache_seed_load_image: "yokozu/atlas-seed-cache:19-08-2026" # Image that carries the cache seed
-infra_cache_seed_load_tag: "19-08-2026" # Tag of the cache seed image
+infra_cache_seed_load_image: "yokozu/atlas-seed-cache" # Image that carries the cache seed
+infra_cache_seed_load_tag: "27-09-2026" # Tag of the cache seed image
 infra_cache_seed_load_include:
   registry: true
   helm_repo: true
