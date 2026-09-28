@@ -68,6 +68,12 @@ playbooks:
         - tags: 00_gather_facts,00_init,01_backup_etc,02_init_sshd,03_configure_users,04_configure_hostname
           limit: jslave
           root_ssh: true
+        - tags: 11_certificates
+          limit: jslave
+          root_ssh: true
+        - tags: 13_configure_repo
+          limit: jslave
+          root_ssh: true
         - tags: 06_configure_kernel,08_configure_security,09_configure_locales,10_manage_services
           limit: jslave
           root_ssh: true
@@ -81,12 +87,6 @@ playbooks:
           limit: jslave
           root_ssh: true
         - tags: 18_remove_unwanted_services
-          limit: jslave
-          root_ssh: true
-        - tags: 11_certificates
-          limit: jslave
-          root_ssh: true
-        - tags: 13_configure_repo
           limit: jslave
           root_ssh: true
         - tags: 12_date_timezone
