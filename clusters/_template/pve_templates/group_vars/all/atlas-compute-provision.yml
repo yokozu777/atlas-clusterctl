@@ -36,12 +36,14 @@ provision_pve_templates:
   ubuntu-base:
     id: 400100
     image_url: https://cloud-images.ubuntu.com/minimal/releases/resolute/release/ubuntu-26.04-minimal-cloudimg-amd64.img
+    image_url_backup: https://mirror.yandex.ru/ubuntu-cloud-images/minimal/releases/resolute/release/ubuntu-26.04-minimal-cloudimg-amd64.img
   oracle-base:
     id: 400101
     image_url: https://yum.oracle.com/templates/OracleLinux/OL9/u8/x86_64/OL9U8_x86_64-kvm-b293.qcow2
   debian-base:
     id: 400102
     image_url: https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2
+    image_url_backup: https://cdimage.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2
 
 build_cloud_image_customize_enabled: false
 build_cloud_image_packages:

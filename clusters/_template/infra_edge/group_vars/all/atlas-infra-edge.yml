@@ -472,8 +472,8 @@ pkg_repo_upstreams:
     upstream_url: "https://deb.debian.org/debian"
     upstream_host: deb.debian.org
   - slug: ubuntu
-    upstream_url: "https://archive.ubuntu.com/ubuntu"
-    upstream_host: archive.ubuntu.com
+    upstream_url: "https://mirrors.edge.kernel.org/ubuntu"
+    upstream_host: mirrors.edge.kernel.org
   - slug: debian-containerd
     upstream_url: "https://download.docker.com/linux/debian"
     upstream_host: download.docker.com
@@ -584,8 +584,8 @@ helm_repo_upstreams:
     upstream_host: falcosecurity.github.io
   - name: projectcalico
     nexus_path: calico
-    upstream_url: "https://docs.tigera.io/calico/charts"
-    upstream_host: docs.tigera.io
+    upstream_url: "https://mirror.yandex.ru/helm/docs.tigera.io"
+    upstream_host: mirror.yandex.ru
     chart_hosts:
       - github.com
   - name: metallb

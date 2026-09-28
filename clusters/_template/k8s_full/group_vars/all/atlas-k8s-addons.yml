@@ -49,7 +49,7 @@ helm_version: https://get.helm.sh/helm-v4.2.1-linux-amd64.tar.gz # URL of the He
 helm_repo_upstreams:
   - { name: oauth2-proxy, nexus_path: oauth2-proxy, upstream_url: "https://oauth2-proxy.github.io/manifests", upstream_host: oauth2-proxy.github.io }
   - { name: falcosecurity, nexus_path: falco, upstream_url: "https://falcosecurity.github.io/charts", upstream_host: falcosecurity.github.io }
-  - { name: projectcalico, nexus_path: calico, upstream_url: "https://docs.tigera.io/calico/charts", upstream_host: docs.tigera.io, chart_hosts: [github.com] }
+  - { name: projectcalico, nexus_path: calico, upstream_url: "https://mirror.yandex.ru/helm/docs.tigera.io", upstream_host: mirror.yandex.ru, chart_hosts: [github.com] }
   - { name: metallb, nexus_path: metallb, upstream_url: "https://metallb.github.io/metallb", upstream_host: metallb.github.io }
   - { name: prometheus-community, nexus_path: prometheus-community, upstream_url: "https://prometheus-community.github.io/helm-charts", upstream_host: prometheus-community.github.io }
   - { name: ceph-csi-operator, nexus_path: rook-ceph-csi-operator, upstream_url: "https://ceph.github.io/ceph-csi-operator", upstream_host: ceph.github.io }
