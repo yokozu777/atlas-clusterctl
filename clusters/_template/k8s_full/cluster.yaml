@@ -239,7 +239,6 @@ playbooks:
         - tags: 810_falco
         - tags: 820_kyverno
         - tags: 830_policy_reporter
-        - tags: 840_trivy
         - tags: 910_cloudnative_pg
         - tags: 920_keycloak
         - tags: 930_keycloak_realm
@@ -252,8 +251,7 @@ playbooks:
         - tags: 960_oauth2_proxy
         - tags: 961_apply_oidc_ingress
         - tags: 962_headlamp
-        - tags: 970_consul
-        - tags: 971_vault
+        - tags: 973_openbao
         - tags: 972_external_secrets
         # Heavy charts after lighter platform services (API/etcd load).
         - tags: 980_argocd
@@ -263,6 +261,7 @@ playbooks:
         - tags: 994_sentry
         - tags: 996_cluster_report
         - tags: 999_debug_tooling
+        - tags: 840_trivy        
           limit: k8s_masters:k8s_workers
         git_ssh: true
         when:

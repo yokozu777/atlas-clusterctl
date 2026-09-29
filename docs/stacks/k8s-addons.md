@@ -80,7 +80,7 @@ Order in `cluster.yaml` matches `playbooks/cluster_addons.yaml`
 | 36–38 | `910_cloudnative_pg` … `930_keycloak_realm` | (localhost) |
 | 39–41 | `940_apiserver_oidc`, `941_k8s_oidc`, `942_pinniped` | (localhost except `940_apiserver_oidc` → `k8s_masters`; `940` after `930`, then `941`, then `942`). Live OIDC: `--tags 930_keycloak_realm,940_apiserver_oidc,941_k8s_oidc` (do not add `--limit` / `LIMIT`). |
 | 42–46 | `950_mailu`, `954_opencost`, `960_oauth2_proxy`, `961_apply_oidc_ingress`, `962_headlamp` | (localhost; OIDC HTTPRoute in 961 after 960; Headlamp after 961) |
-| 46–48 | `970_consul`, `971_vault`, `972_external_secrets` | (localhost). `971_vault` also SSHes to `k8s_masters` for unseal-key SoT — no `limit` in `cluster.yaml`. |
+| 46–47 | `973_openbao`, `972_external_secrets` | (localhost). Template sets `consul_chart_state` and `vault_chart_state` to `skip` and does not invoke `970_consul` / `971_vault`. `973_openbao` SSHes to `k8s_masters` for unseal-key SoT — no `limit` in `cluster.yaml`. |
 | 49 | `980_argocd` | (localhost; after external-secrets — heavy CRDs) |
 | 50 | `982_argocd_rollouts` | (localhost; after argocd) |
 | 51–54 | `990_rook_ceph_dashboard`, `992_kibana_dashboards`, `994_sentry`, `996_cluster_report` | (localhost) |
@@ -91,7 +91,7 @@ The **k8s-addons** phase starts with `110_workspace` (playbook tag, not `always`
 Most roles are **localhost** Helm/kubectl against `controller_kubeconfig`.  
 `940_apiserver_oidc` — SSH to `k8s_masters` (`limit: k8s_masters`); installs lab CA and merges kube-apiserver OIDC extraArgs after Keycloak. Leaf overlay sets only `kube_apiserver_oidc_enabled: true` (issuer is `oidc_issuer_url`; client_id/ca_file from role 940 defaults). Sibling catalog default `false`.  
 `941_k8s_oidc` — localhost CRB + `kubeconfig.oidc` after 940 (API already has OIDC flags). Do not `--limit k8s_masters` with `--tags 930_keycloak_realm,940_apiserver_oidc,941_k8s_oidc`: selective `--tags` collapse to one playbook, and that limit would skip 930/941 (localhost). Play 940 still targets `k8s_masters` without a CLI limit.  
-`971_vault` — localhost helm/unseal plus SSH plays on `k8s_masters` for `/root/vault-init-keys.txt` (no invocation `limit`). Do not `--limit localhost` or `--limit k8s_masters` with `--tags 971_vault`. Helm 4 `upgrade --install` uses `--take-ownership --force-conflicts` (SSA vs `vault-k8s` on webhook `caBundle`); do not delete the injector MutatingWebhookConfiguration.  
+`973_openbao` — localhost helm/unseal plus SSH plays on `k8s_masters` for `/root/openbao-init-keys.txt` (no invocation `limit`). HA storage is integrated Raft, not Consul. Do not `--limit localhost` or `--limit k8s_masters` with `--tags 973_openbao`. Helm 4 `upgrade --install` uses `--take-ownership --force-conflicts` (SSA vs the injector webhook `caBundle`); do not delete the injector MutatingWebhookConfiguration. `970_consul` and `971_vault` stay in the playbook; the k8s_full template leaves both chart states at `skip`.  
 `999_debug_tooling` — break-glass CLI on nodes.
 
 You may rename inventory groups, but then update in sync:

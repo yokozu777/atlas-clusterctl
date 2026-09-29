@@ -74,8 +74,7 @@ EXPECTED_ADDONS_TAGS = (
     "960_oauth2_proxy",
     "961_apply_oidc_ingress",
     "962_headlamp",
-    "970_consul",
-    "971_vault",
+    "973_openbao",
     "972_external_secrets",
     "980_argocd",
     "982_argocd_rollouts",
@@ -140,6 +139,7 @@ class K8sAddonsOrchestrationTest(unittest.TestCase):
         self.assertLess(tags.index("840_trivy"), tags.index("910_cloudnative_pg"))
         self.assertLess(tags.index("840_trivy"), tags.index("954_opencost"))
         self.assertLess(tags.index("954_opencost"), tags.index("960_oauth2_proxy"))
+        self.assertLess(tags.index("973_openbao"), tags.index("972_external_secrets"))
         self.assertLess(tags.index("972_external_secrets"), tags.index("980_argocd"))
         self.assertLess(tags.index("810_falco"), tags.index("820_kyverno"))
         self.assertLess(tags.index("820_kyverno"), tags.index("830_policy_reporter"))
@@ -293,6 +293,9 @@ class K8sAddonsOrchestrationTest(unittest.TestCase):
         )
         self.assertIn("sentry_chart_state: skip", addons)
         self.assertNotIn("sentry_chart_state: absent", addons)
+        self.assertIn("consul_chart_state: skip", addons)
+        self.assertIn("vault_chart_state: skip", addons)
+        self.assertIn("openbao_chart_state: present", addons)
         self.assertIn("chart_state_var: mailu_chart_state", addons)
         self.assertIn("chart_state_var: kibana_chart_state", addons)
         docs = (ROOT / "docs" / "stacks" / "k8s-addons.md").read_text(encoding="utf-8")

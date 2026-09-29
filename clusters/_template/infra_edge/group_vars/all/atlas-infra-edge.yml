@@ -584,8 +584,10 @@ helm_repo_upstreams:
     upstream_host: falcosecurity.github.io
   - name: projectcalico
     nexus_path: calico
-    upstream_url: "https://mirror.yandex.ru/helm/docs.tigera.io"
-    upstream_host: mirror.yandex.ru
+    upstream_url: "https://docs.tigera.io/calico/charts"
+    upstream_host: docs.tigera.io
+    upstream_url_backup: "https://mirror.yandex.ru/helm/docs.tigera.io"
+    upstream_host_backup: mirror.yandex.ru
     chart_hosts:
       - github.com
   - name: metallb
@@ -604,6 +606,8 @@ helm_repo_upstreams:
     nexus_path: rook-release
     upstream_url: "https://charts.rook.io/release"
     upstream_host: charts.rook.io
+    upstream_url_backup: "https://mirror.yandex.ru/helm/charts.rook.io"
+    upstream_host_backup: mirror.yandex.ru
   - name: fluent
     nexus_path: fluent
     upstream_url: "https://fluent.github.io/helm-charts"
