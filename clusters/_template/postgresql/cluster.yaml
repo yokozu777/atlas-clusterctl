@@ -69,6 +69,9 @@ playbooks:
         - tags: 00_gather_facts,00_init,01_backup_etc,02_init_sshd,03_configure_users,04_configure_hostname
           limit: pgsql_etcd_cluster:pgsql_cluster:pgsql_lbs
           root_ssh: true
+        - tags: 07_configure_network_dns
+          limit: pgsql_etcd_cluster:pgsql_cluster:pgsql_lbs
+          root_ssh: true
         - tags: 11_certificates
           limit: pgsql_etcd_cluster:pgsql_cluster:pgsql_lbs
           root_ssh: true

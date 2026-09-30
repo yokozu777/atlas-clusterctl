@@ -68,6 +68,9 @@ playbooks:
         - tags: 00_gather_facts,00_init,01_backup_etc,02_init_sshd,03_configure_users,04_configure_hostname
           limit: jslave
           root_ssh: true
+        - tags: 07_configure_network_dns
+          limit: jslave
+          root_ssh: true
         - tags: 11_certificates
           limit: jslave
           root_ssh: true

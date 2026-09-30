@@ -39,6 +39,10 @@ from clusterctl.workspace_paths import (
     validate_workspace_ansible_env,
 )
 
+# Executor images are published for linux/amd64. Pin pull and run so a
+# Docker daemon on Apple Silicon fetches and starts that variant.
+DOCKER_PLATFORM = "linux/amd64"
+
 PASSTHROUGH_ENV_KEYS = (
     # Do not pass host GIT_SSH_COMMAND — it usually points at a host-only key
     # path (e.g. GitLab runner ~/.ssh/id_deploy). Container uses the mounted
@@ -608,6 +612,7 @@ def fix_bind_mount_ownership(ctx: ClusterContext) -> None:
     for path in paths:
         src = docker_bind_source(path, mounts=self_mounts)
         cmd.extend(["-v", f"{src}:{path}"])
+    cmd.extend(["--platform", DOCKER_PLATFORM])
     cmd.append(image_ref)
     cmd.extend(["chown", "-R", f"{uid}:{gid}", *[str(p) for p in paths]])
 
@@ -731,8 +736,9 @@ def build_docker_run_command(
     This helper does **not** re-run preflight — avoids staging the key when CLI
     or SSH checks would fail. It still rejects ``-d``/``--detach`` and
     ``--user``/``-u`` in ``execution.extra_args`` (defense in depth for direct
-    callers). Appends ``--user`` host uid:gid after ``extra_args`` so clusterctl
-    always owns the container user.
+    callers). Appends ``--user`` host uid:gid after ``extra_args``, then
+    ``--platform linux/amd64`` immediately before the image so the executor
+    variant stays amd64.
     """
     extra_args = ctx.execution.docker.extra_args
     reject_docker_extra_args(extra_args)
@@ -763,6 +769,8 @@ def build_docker_run_command(
     user_spec = host_docker_user_spec()
     if user_spec is not None:
         cmd.extend(["--user", user_spec])
+    # After extra_args so a copied --platform cannot select another arch.
+    cmd.extend(["--platform", DOCKER_PLATFORM])
     cmd.append(image_ref)
 
     inner_cmd_str = shlex.join(inner_argv)

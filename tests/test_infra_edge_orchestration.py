@@ -78,6 +78,7 @@ EXPECTED_INIT_INFRA_POST_TAGS = (
     "00_ensure_workspace",
     "00_gather_facts,17_configure_network",
     "18_remove_unwanted_services",
+    "07_configure_network_dns",
     "11_certificates",
     "13_configure_repo",
     "12_date_timezone",
@@ -138,6 +139,7 @@ class InfraEdgeOrchestrationTest(unittest.TestCase):
         # Short init must not pull DNS/apt/CA before BIND exists.
         init_tags = " ".join(EXPECTED_INIT_INFRA_TAGS)
         self.assertNotIn("17_configure_network", init_tags)
+        self.assertNotIn("07_configure_network_dns", init_tags)
         self.assertNotIn("11_certificates", init_tags)
         self.assertNotIn("18_remove_unwanted_services", init_tags)
 
@@ -328,6 +330,12 @@ class InfraEdgeOrchestrationTest(unittest.TestCase):
         self.assertIn("infra: atlas-infra-edge/infra", content)
         self.assertIn("playbooks/infra_hosts.yaml", content)
         self.assertIn("docs/stacks/infra-edge.md", content)
+        helm = (TEMPLATE / "group_vars" / "all" / "atlas-infra-edge.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("name: openbao", helm)
+        self.assertIn("https://openbao.github.io/openbao-helm", helm)
+        self.assertIn('{ repo: openbao, chart: openbao, version: "0.29.3" }', helm)
 
     def test_secrets_examples_point_to_overlay(self) -> None:
         text = (TEMPLATE / "group_vars" / "all" / "atlas-infra-edge.secrets.yml").read_text(

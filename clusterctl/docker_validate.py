@@ -18,6 +18,7 @@ from clusterctl.execution import (
     resolve_docker_image_ref,
 )
 from clusterctl.docker_executor import (
+    DOCKER_PLATFORM,
     DOCKER_WORKSPACE_ANSIBLE_ENV_KEYS,
     build_container_env,
     build_docker_run_command,
@@ -197,7 +198,7 @@ def _run_subprocess(
 
 def docker_pull_image(image_ref: str, *, timeout_sec: int) -> tuple[bool, str]:
     return _run_subprocess(
-        ["docker", "pull", image_ref],
+        ["docker", "pull", "--platform", DOCKER_PLATFORM, image_ref],
         timeout_sec=timeout_sec,
         label=f"docker pull {image_ref}",
     )

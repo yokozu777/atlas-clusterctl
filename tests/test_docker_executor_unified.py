@@ -252,8 +252,8 @@ class DockerExecutorUnifiedTest(unittest.TestCase):
             self.assertIn("--user", cmd)
             user_at = cmd.index("--user")
             self.assertEqual(cmd[user_at + 1], f"{os.getuid()}:{os.getgid()}")
-            # Appended after extra_args, immediately before the image ref.
-            self.assertEqual(cmd[user_at + 2], resolve_docker_image_ref(ctx.execution.docker))
+            self.assertEqual(cmd[user_at + 2 : user_at + 4], ["--platform", "linux/amd64"])
+            self.assertEqual(cmd[user_at + 4], resolve_docker_image_ref(ctx.execution.docker))
             self.assertNotIn("/etc/passwd", joined)
         finally:
             prepared.cleanup()
@@ -350,8 +350,11 @@ class DockerExecutorUnifiedTest(unittest.TestCase):
         run.assert_called_once()
         chown_cmd = run.call_args.args[0]
         self.assertEqual(chown_cmd[0:3], ["docker", "run", "--rm"])
-        self.assertIn("chown", chown_cmd)
         chown_at = chown_cmd.index("chown")
+        self.assertEqual(
+            chown_cmd[chown_at - 3 : chown_at - 1],
+            ["--platform", "linux/amd64"],
+        )
         reclaim = {Path(p).resolve() for p in chown_cmd[chown_at + 3 :]}
         self.assertIn(ws.resolve(), reclaim)
         self.assertNotIn((self.root / "workspace").resolve(), reclaim)

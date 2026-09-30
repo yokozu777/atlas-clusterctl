@@ -86,6 +86,9 @@ playbooks:
         - tags: 08_configure_security
           limit: k8s_lbs:k8s_masters:k8s_workers
           root_ssh: true
+        - tags: 07_configure_network_dns
+          limit: k8s_lbs:k8s_masters:k8s_workers
+          root_ssh: true
         - tags: 11_certificates
           limit: k8s_lbs:k8s_masters:k8s_workers
           root_ssh: true

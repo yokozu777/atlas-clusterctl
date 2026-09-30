@@ -143,7 +143,6 @@ containerd_registry_mirrors:
   - { dir_name: jaegertracing, server: "https://jaegertracing", mirror_path: docker-hub }
   - { dir_name: graylog, server: "https://graylog", mirror_path: docker-hub }
   - { dir_name: getsentry, server: "https://getsentry", mirror_path: docker-hub }
-  - { dir_name: kubevious, server: "https://kubevious", mirror_path: docker-hub }
   - { dir_name: opensearchproject, server: "https://opensearchproject", mirror_path: docker-hub }
   - { dir_name: redislabs, server: "https://redislabs", mirror_path: docker-hub }
   - { dir_name: rook, server: "https://rook", mirror_path: docker-hub }

@@ -99,6 +99,9 @@ playbooks:
         - tags: 18_remove_unwanted_services
           limit: infra_platform
           root_ssh: true
+        - tags: 07_configure_network_dns
+          limit: infra_platform
+          root_ssh: true
         - tags: 11_certificates
           limit: infra_platform
           root_ssh: true

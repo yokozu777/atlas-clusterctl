@@ -289,9 +289,6 @@ containerd_registry_mirrors:
   - dir_name: getsentry
     server: "https://getsentry"
     mirror_path: docker-hub
-  - dir_name: kubevious
-    server: "https://kubevious"
-    mirror_path: docker-hub
   - dir_name: opensearchproject
     server: "https://opensearchproject"
     mirror_path: docker-hub
@@ -620,6 +617,10 @@ helm_repo_upstreams:
     nexus_path: helm.releases.hashicorp.com/
     upstream_url: "https://helm.releases.hashicorp.com"
     upstream_host: helm.releases.hashicorp.com
+  - name: openbao
+    nexus_path: openbao-helm/
+    upstream_url: "https://openbao.github.io/openbao-helm"
+    upstream_host: openbao.github.io
   - name: istio
     nexus_path: istio/
     upstream_url: "https://istio-release.storage.googleapis.com/charts"
@@ -674,10 +675,6 @@ helm_repo_upstreams:
     nexus_path: chaos-mesh/
     upstream_url: "https://charts.chaos-mesh.org"
     upstream_host: charts.chaos-mesh.org
-  - name: kubevious
-    nexus_path: kubevious/
-    upstream_url: "https://helm.kubevious.io"
-    upstream_host: helm.kubevious.io
   - name: external-secrets
     nexus_path: external-secrets/
     upstream_url: "https://external-secrets.io"
@@ -820,6 +817,7 @@ helm_repo_cache_warm_specs:
   - { repo: elastic, chart: kibana, version: "8.5.1" }
   - { repo: hashicorp, chart: vault, version: "0.34.1" }
   - { repo: hashicorp, chart: consul, version: "2.0.3" }
+  - { repo: openbao, chart: openbao, version: "0.29.3" }
   - { repo: istio, chart: base, version: "1.30.3" }
   - { repo: istio, chart: istiod, version: "1.30.3" }
   - { repo: istio, chart: gateway, version: "1.30.3" }
@@ -842,7 +840,6 @@ helm_repo_cache_warm_specs:
   - { repo: opencost, chart: opencost, version: "2.5.30" }
   - { repo: sentry, chart: sentry, version: "33.7.0" }
   - { repo: metrics-server, chart: metrics-server, version: "3.14.0" }
-  - { repo: kubevious, chart: kubevious, version: "1.2.2" }
 
 # =============================================================================
 # Custom static nginx

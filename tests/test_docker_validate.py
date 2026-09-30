@@ -23,6 +23,7 @@ from clusterctl.docker_validate import (
     check_docker_playbooks_host,
     check_docker_workspace_ansible_host,
     cmd_docker_pull,
+    docker_pull_image,
     validate_docker_deep,
     verify_container_mounts,
 )
@@ -226,6 +227,25 @@ class DockerValidateTest(unittest.TestCase):
         checks = validate_docker_deep(self._ctx(), options=opts)
         pull.assert_not_called()
         self.assertTrue(any(check.code == "execution_docker_smoke" for check in checks))
+
+    @mock.patch("clusterctl.docker_validate.subprocess.run")
+    def test_docker_pull_pins_linux_amd64(self, run: mock.Mock) -> None:
+        run.return_value = mock.Mock(returncode=0, stdout="ok\n", stderr="")
+        ok, _detail = docker_pull_image(
+            "harbor.example/library/krang:latest",
+            timeout_sec=5,
+        )
+        self.assertTrue(ok)
+        self.assertEqual(
+            run.call_args.args[0],
+            [
+                "docker",
+                "pull",
+                "--platform",
+                "linux/amd64",
+                "harbor.example/library/krang:latest",
+            ],
+        )
 
     @mock.patch("clusterctl.docker_validate.docker_pull_image", return_value=(True, "Digest: sha256:abc"))
     def test_cmd_docker_pull(self, pull: mock.Mock) -> None:
