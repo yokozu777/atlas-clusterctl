@@ -129,6 +129,10 @@ PARITY_EXCLUDE: frozenset[str] = frozenset(
         "helm_repo_nginx_cache_warm_timeout",
         "pki_ca_host",
         "k8s_lb_dns_key_secret",
+        # One copy on default compute-provision secrets; sibling standalone may still declare them.
+        "external_dns_tsig_secret",
+        "external_dns_istio_tsig_secret",
+        "external_dns_apex_tsig_secret",
         "cluster_dns_ip",
         # k8s sibling standalone / controller-injected (public k8s_full omits these).
         "harbor_host",
@@ -298,6 +302,7 @@ SECRET_FORBIDDEN_IN_CATALOG: dict[str, frozenset[str]] = {
             "vault_oidc_client_secret",
             "argocd_oidc_client_secret",
             "external_dns_tsig_secret",
+            "external_dns_apex_tsig_secret",
             "external_dns_istio_tsig_secret",
             "elastic_password",
             "elastic_cert_password",
@@ -341,8 +346,6 @@ SECRET_REQUIRED_IN_SECRETS: dict[str, frozenset[str]] = {
             "bind_apex_tsig_secret",
             "bind_k8s_tsig_secret",
             "bind_istio_tsig_secret",
-            "external_dns_tsig_secret",
-            "external_dns_istio_tsig_secret",
             "stepca_init_password",
             "nginx_cache_sync_ssh_password",
             "infra_cache_seed_publish_registry_user",
@@ -362,8 +365,6 @@ SECRET_REQUIRED_IN_SECRETS: dict[str, frozenset[str]] = {
             "envoy_gateway_oidc_client_secret",
             "vault_oidc_client_secret",
             "argocd_oidc_client_secret",
-            "external_dns_tsig_secret",
-            "external_dns_istio_tsig_secret",
             "elastic_password",
             "elastic_cert_password",
             "elastic_logger_password",
@@ -401,8 +402,6 @@ INVENTORY_SECRET_REQUIRED: dict[str, frozenset[str]] = {
     "atlas-node-foundation": frozenset({"initial_password"}),
     "atlas-infra-edge": frozenset(
         {
-            "external_dns_tsig_secret",
-            "external_dns_istio_tsig_secret",
             "stepca_init_password",
             "nginx_cache_sync_ssh_password",
         }
@@ -418,8 +417,6 @@ INVENTORY_SECRET_REQUIRED: dict[str, frozenset[str]] = {
             "envoy_gateway_oidc_client_secret",
             "vault_oidc_client_secret",
             "argocd_oidc_client_secret",
-            "external_dns_tsig_secret",
-            "external_dns_istio_tsig_secret",
             "elastic_password",
             "elastic_cert_password",
             "elastic_logger_password",

@@ -15,9 +15,8 @@
 
 # Leaf DNS identity
 # (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
-dns_domain_suffix: dev-mxhash.com # Public DNS suffix for this cluster
+dns_domain_suffix: example.com # Public DNS suffix for this cluster
 cluster_domain: "k8s.{{ dns_domain_suffix }}" # Cluster FQDN, usually a name under the DNS suffix
-dns_server_ip: 192.168.1.219 # Address of the lab DNS server
 
 provision_stack: k8s
 # Lifecycle: apply | recreate | destroy

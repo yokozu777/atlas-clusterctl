@@ -7,10 +7,9 @@
 # Leaf DNS identity
 # (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
 # Orchestration contract: docs/stacks/k8s-addons.md
-dns_domain_suffix: dev-mxhash.com # Public DNS suffix for this cluster
+dns_domain_suffix: example.com # Public DNS suffix for this cluster
 cluster_domain: "k8s.{{ dns_domain_suffix }}" # Cluster FQDN, usually a name under the DNS suffix
 k8s_cluster_domain: "{{ cluster_domain }}"
-dns_server_ip: 192.168.1.219 # Address of the lab DNS server
 
 k8s_dns_domain: cluster.local # In-cluster DNS domain, usually cluster.local
 k8s_lb_hostname: kubelb # Short hostname of the API load balancer
@@ -787,7 +786,7 @@ k8s_secrets:
   mailu_secret_key: "{{ mailu_secret_key }}"
   mailu_initial_password: "{{ mailu_initial_password }}"
   external_dns_tsig_secret: "{{ external_dns_tsig_secret }}"
-  external_dns_apex_tsig_secret: "{{ external_dns_apex_tsig_secret }}"
+  external_dns_apex_tsig_secret: "{{ provision_dns_key_secret }}"
   external_dns_istio_tsig_secret: "{{ external_dns_istio_tsig_secret }}"
   ceph_dashboard_password: "{{ ceph_dashboard_password }}"
   elastic_password: "{{ elastic_password }}"

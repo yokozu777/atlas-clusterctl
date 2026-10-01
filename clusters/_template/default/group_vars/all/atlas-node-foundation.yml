@@ -362,7 +362,7 @@ ntp_manage_host_chrony: true
 # Format: list of IPs or hostnames
 # Example: ["192.168.1.1", "pool.ntp.org"]
 ntp_servers:
-  - 192.168.1.219
+  - "{{ dns_server_ip }}"
 
 # Wait after enabling NTP before offset check
 ntp_sync_settle_seconds: 10
@@ -393,7 +393,7 @@ pkg_repo_base: https://nexus.example.com/repository
 #     uri: "{{ pkg_repo_base }}/ubuntu"
 # Mixed leaves list every OS they may host; wrong-OS rows are skipped on the node.
 # Env default may hold OS base; leaf stack adds via pkg_repos_extra (concat in role).
-pkg_repo_nginx_domain: "repo.example.com"
+pkg_repo_nginx_domain: "repo.{{ dns_domain_suffix }}"
 pkg_repos:
   - name: ubuntu
     enabled: true
@@ -496,8 +496,10 @@ node_foundation_network_serial: "100%"
 #     dns: []
 network_interfaces: []
 
-# Default DNS for resolv.conf and .network when item.dns is empty
-dns_servers: ["192.168.1.219"]
+# Default DNS for resolv.conf and .network when item.dns is empty.
+# One lab address: dns_server_ip on the default layer.
+dns_servers:
+  - "{{ dns_server_ip }}"
 
 # Fallback default gateway when runtime discovery returns empty (typical lab /24)
 network_default_gateway: "192.168.1.1"
