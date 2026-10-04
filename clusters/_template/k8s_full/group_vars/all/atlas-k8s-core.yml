@@ -93,9 +93,9 @@ pkg_repo_upstreams: []
 # =============================================================================
 # Node packages / versions (11_k8s_hosts)
 # =============================================================================
-k8s_apt_repo_version: "1.36" # Kubernetes apt repository minor version
-k8s_version_ubuntu: "1.36.3-1.1" # kubelet, kubeadm, and kubectl pin on Ubuntu
-k8s_version_oracle: "1.36.3" # kubelet, kubeadm, and kubectl pin on Oracle Linux
+k8s_apt_repo_version: "1.37" # Kubernetes apt repository minor version
+k8s_version_ubuntu: "1.37.1-1.1" # kubelet, kubeadm, and kubectl pin on Ubuntu
+k8s_version_oracle: "1.37.1" # kubelet, kubeadm, and kubectl pin on Oracle Linux
 k8s_packages_ubuntu:
   - kubelet={{ k8s_version_ubuntu }}
   - kubeadm={{ k8s_version_ubuntu }}

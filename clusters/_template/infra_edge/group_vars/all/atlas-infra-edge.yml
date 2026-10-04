@@ -309,6 +309,8 @@ containerd_registry_mirrors:
 registry_compose_project_dir: /opt/registry-compose
 registry_data_dir: /opt/registry
 registry_image: "registry:3.1.1"
+# Pull-through cache TTL (REGISTRY_PROXY_TTL). 0 = never expire cached blobs.
+registry_proxy_ttl: "0"
 registry_listen_ip: "{{ dns_server_ip }}"
 registry_proxy_port_base: 5000
 registry_container_port: 5000
@@ -358,11 +360,11 @@ docker_dnf_public_repo_filename: docker-ce
 # =============================================================================
 # --- Kubernetes / Docker CE ---
 
-enable_repo_k8s_1_36: true
+enable_repo_k8s_1_37: true
 enable_repo_yum_docker_ce_stable_9: true
 enable_repo_yum_docker_ce_stable_10: true
-enable_repo_k8s_ubuntu_1_36: true
-k8s_apt_repo_version: '1.36' # Kubernetes apt repository major
+enable_repo_k8s_ubuntu_1_37: true
+k8s_apt_repo_version: '1.37' # Kubernetes apt repository major
 
 # --- Oracle Linux 9 ---
 
@@ -613,6 +615,10 @@ helm_repo_upstreams:
     nexus_path: helm.elastic.local/
     upstream_url: "https://helm.elastic.co"
     upstream_host: helm.elastic.co
+  - name: opensearch
+    nexus_path: opensearch/
+    upstream_url: "https://opensearch-project.github.io/helm-charts"
+    upstream_host: opensearch-project.github.io
   - name: hashicorp
     nexus_path: helm.releases.hashicorp.com/
     upstream_url: "https://helm.releases.hashicorp.com"
@@ -623,8 +629,13 @@ helm_repo_upstreams:
     upstream_host: openbao.github.io
   - name: istio
     nexus_path: istio/
-    upstream_url: "https://istio-release.storage.googleapis.com/charts"
-    upstream_host: istio-release.storage.googleapis.com
+    # Final CDN (blob.istio.io / GCS return 308 → R2; nginx does not follow).
+    upstream_url: "https://istio-release.r2.istio.io/charts"
+    upstream_host: istio-release.r2.istio.io
+    # Index still advertises blob/GCS; rewrite to mirror path (same filenames on R2).
+    upstream_url_aliases:
+      - "https://blob.istio.io/istio-release/charts"
+      - "https://istio-release.storage.googleapis.com/charts"
   - name: kiali
     nexus_path: kiali/
     upstream_url: "https://kiali.org/helm-charts"
@@ -818,9 +829,9 @@ helm_repo_cache_warm_specs:
   - { repo: hashicorp, chart: vault, version: "0.34.1" }
   - { repo: hashicorp, chart: consul, version: "2.0.3" }
   - { repo: openbao, chart: openbao, version: "0.29.3" }
-  - { repo: istio, chart: base, version: "1.30.3" }
-  - { repo: istio, chart: istiod, version: "1.30.3" }
-  - { repo: istio, chart: gateway, version: "1.30.3" }
+  - { repo: istio, chart: base, version: "1.31.1" }
+  - { repo: istio, chart: istiod, version: "1.31.1" }
+  - { repo: istio, chart: gateway, version: "1.31.1" }
   - { repo: kiali, chart: kiali-operator, version: "2.30.0" }
   - { repo: argo, chart: argo-cd, version: "10.4.0" }
   - { repo: argo, chart: argo-rollouts, version: "2.41.1" }
@@ -959,7 +970,7 @@ infra_cache_seed_publish_include:
   custom_www: true
 infra_cache_seed_load_enabled: true # Load the cache seed image when on
 infra_cache_seed_load_image: "yokozu/atlas-seed-cache" # Image that carries the cache seed
-infra_cache_seed_load_tag: "27-09-2026" # Tag of the cache seed image
+infra_cache_seed_load_tag: "04-10-2026" # Tag of the cache seed image
 infra_cache_seed_load_include:
   registry: true
   helm_repo: true

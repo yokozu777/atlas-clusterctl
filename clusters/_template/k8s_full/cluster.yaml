@@ -232,6 +232,8 @@ playbooks:
         - tags: 620_elasticsearch
         - tags: 630_kibana_prepare
         - tags: 640_kibana
+        - tags: 616_opensearch
+        - tags: 626_opensearch_dashboards
         - tags: 650_fluentbit
         # Mesh: istio-system must exist before Kiali CR; tracing before Kiali (Jaeger wait).
         - tags: 710_istio
@@ -261,11 +263,11 @@ playbooks:
         - tags: 982_argocd_rollouts
         - tags: 990_rook_ceph_dashboard
         - tags: 992_kibana_dashboards
+        - tags: 993_opensearch_dashboards
         - tags: 994_sentry
         - tags: 996_cluster_report
         - tags: 999_debug_tooling
-        - tags: 840_trivy        
-          limit: k8s_masters:k8s_workers
+        - tags: 840_trivy
         git_ssh: true
         when:
           inventory_groups_any:

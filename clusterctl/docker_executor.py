@@ -280,8 +280,15 @@ def prepare_container_ssh_key(
         staging = Path(tempfile.mkdtemp(prefix="atlas-ssh-", dir=str(parent)))
         staging.chmod(0o700)
         dest = staging / "id_rsa"
+        # Docker creates a directory (mode 0755) when the bind source is missing.
+        if dest.is_dir():
+            shutil.rmtree(dest)
+        elif dest.exists():
+            dest.unlink()
         dest.write_bytes(normalize_openssh_private_key_bytes(source.read_bytes()))
         dest.chmod(0o600)
+        if not dest.is_file():
+            raise ClusterctlError(f"docker: SSH key was not staged as a file: {dest}")
     except OSError as exc:
         if staging is not None:
             shutil.rmtree(staging, ignore_errors=True)
@@ -635,6 +642,10 @@ def build_docker_mounts(ctx: ClusterContext, *, ssh_key_host: Path) -> list[str]
     """
     repo_root = ctx.repo_root.resolve()
     ssh_key = ssh_key_host.expanduser().resolve()
+    if not ssh_key.is_file():
+        raise ClusterctlError(
+            f"docker: refusing to mount SSH key that is not a file: {ssh_key}"
+        )
     clusters = clusters_root(repo_root).resolve()
     if not clusters.is_dir():
         raise ClusterctlError(

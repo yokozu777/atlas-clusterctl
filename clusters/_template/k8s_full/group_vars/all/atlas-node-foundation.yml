@@ -31,12 +31,12 @@ pkg_repos_extra:
   - name: ubuntu-containerd
     enabled: true
     uri: "{{ 'ubuntu-containerd' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}"
-  - name: k8s-ubuntu-1.36
+  - name: k8s-ubuntu-1.37
     enabled: true
-    uri: "{{ 'k8s-ubuntu-1.36' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}"
-  - name: k8s-1.36
+    uri: "{{ 'k8s-ubuntu-1.37' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}"
+  - name: k8s-1.37
     enabled: true
-    uri: "{{ 'k8s-1.36' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}"
+    uri: "{{ 'k8s-1.37' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}"
   - name: yum_docker-ce-stable-9
     enabled: true
     uri: "{{ 'yum_docker-ce-stable-9' | pkg_repo_nginx_uri(pkg_repo_nginx_domain) }}"

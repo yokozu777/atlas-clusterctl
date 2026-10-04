@@ -53,6 +53,8 @@ EXPECTED_ADDONS_TAGS = (
     "620_elasticsearch",
     "630_kibana_prepare",
     "640_kibana",
+    "616_opensearch",
+    "626_opensearch_dashboards",
     "650_fluentbit",
     "710_istio",
     "720_external_dns_istio",
@@ -80,6 +82,7 @@ EXPECTED_ADDONS_TAGS = (
     "982_argocd_rollouts",
     "990_rook_ceph_dashboard",
     "992_kibana_dashboards",
+    "993_opensearch_dashboards",
     "994_sentry",
     "996_cluster_report",
     "999_debug_tooling",
@@ -303,6 +306,30 @@ class K8sAddonsOrchestrationTest(unittest.TestCase):
         self.assertIn("`skip`", docs)
         self.assertIn("intentional teardown", docs)
         self.assertIn("994_sentry", list(EXPECTED_ADDONS_TAGS))
+        for key in (
+            "trivy_chart_state",
+            "falco_chart_state",
+            "kyverno_chart_state",
+            "policy_reporter_chart_state",
+            "chaos_mesh_chart_state",
+            "argocd_chart_state",
+            "argo_rollouts_chart_state",
+            "opencost_chart_state",
+            "mailu_chart_state",
+            "sentry_chart_state",
+        ):
+            self.assertIn(f"{key}: skip", addons)
+
+    def test_template_logging_stack_defaults_to_opensearch(self) -> None:
+        addons = (TEMPLATE / "group_vars" / "all" / "atlas-k8s-addons.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("elasticsearch_chart_state: absent", addons)
+        self.assertIn("kibana_chart_state: absent", addons)
+        self.assertIn("opensearch_chart_state: present", addons)
+        self.assertIn("opensearch_dashboards_chart_state: present", addons)
+        self.assertIn("chart_state_var: opensearch_chart_state", addons)
+        self.assertIn("chart_state_var: opensearch_dashboards_chart_state", addons)
 
 
 if __name__ == "__main__":

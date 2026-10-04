@@ -55,9 +55,20 @@ helm_repo_upstreams:
   - { name: rook-release, nexus_path: rook-release, upstream_url: "https://charts.rook.io/release", upstream_host: charts.rook.io }
   - { name: fluent, nexus_path: fluent, upstream_url: "https://fluent.github.io/helm-charts", upstream_host: fluent.github.io }
   - { name: elastic, nexus_path: helm.elastic.local/, upstream_url: "https://helm.elastic.co", upstream_host: helm.elastic.co }
+  - { name: opensearch, nexus_path: opensearch/, upstream_url: "https://opensearch-project.github.io/helm-charts", upstream_host: opensearch-project.github.io }
   - { name: hashicorp, nexus_path: helm.releases.hashicorp.com/, upstream_url: "https://helm.releases.hashicorp.com", upstream_host: helm.releases.hashicorp.com }
   - { name: openbao, nexus_path: openbao-helm/, upstream_url: "https://openbao.github.io/openbao-helm", upstream_host: openbao.github.io }
-  - { name: istio, nexus_path: istio/, upstream_url: "https://istio-release.storage.googleapis.com/charts", upstream_host: istio-release.storage.googleapis.com }
+  # Final CDN (blob.istio.io / GCS return 308 → R2; nginx does not follow).
+  - {
+      name: istio,
+      nexus_path: istio/,
+      upstream_url: "https://istio-release.r2.istio.io/charts",
+      upstream_host: istio-release.r2.istio.io,
+      upstream_url_aliases: [
+        "https://blob.istio.io/istio-release/charts",
+        "https://istio-release.storage.googleapis.com/charts",
+      ],
+    }
   - { name: kiali, nexus_path: kiali/, upstream_url: "https://kiali.org/helm-charts", upstream_host: kiali.org }
   - { name: argo, nexus_path: argo/, upstream_url: "https://argoproj.github.io/argo-helm", upstream_host: argoproj.github.io }
   - { name: codecentric, nexus_path: codecentric/, upstream_url: "https://codecentric.github.io/helm-charts", upstream_host: codecentric.github.io }
@@ -91,6 +102,7 @@ helm_repos:
   - { name: rook-release, path: rook-release }
   - { name: fluent, path: fluent }
   - { name: elastic, path: helm.elastic.local/ }
+  - { name: opensearch, path: opensearch/ }
   - { name: hashicorp, path: helm.releases.hashicorp.com/ }
   - { name: openbao, path: openbao-helm/ }
   - { name: istio, path: istio/ }
@@ -135,7 +147,7 @@ calico_linux_dataplane: BPF
 calico_bgp: Disabled
 calico_ip_pool_encapsulation: VXLANCrossSubnet
 # CRDs: helm template calico-crds projectcalico/projectcalico.org.v3 --version <calico_chart_version>
-calico_chart_version: "v3.32.1"
+calico_chart_version: "v3.33.0"
 calico_chart_state: present
 
 # --- 310_prometheus ---
@@ -320,6 +332,8 @@ oauth2_callback_url: "https://{{ oauth2_host }}/oauth2/callback"
 oauth2_signout_url: "https://{{ oauth2_host }}/oauth2/sign_out"
 elasticsearch_host: "elasticsearch.{{ k8s_cluster_domain }}"
 kibana_host: "kibana.{{ k8s_cluster_domain }}"
+opensearch_host: "opensearch.{{ k8s_cluster_domain }}"
+opensearch_dashboards_host: "opensearch-dashboards.{{ k8s_cluster_domain }}"
 k8s_ingress_apps:
   - name: kibana
     chart_state_var: kibana_chart_state
@@ -336,6 +350,23 @@ k8s_ingress_apps:
     host: "{{ elasticsearch_host }}"
     namespace: "{{ logging_namespace }}"
     service: elasticsearch-master
+    port: 9200
+    tls: false
+    ssl_passthrough: true
+    backend_protocol: HTTPS
+
+  - name: opensearch-dashboards
+    chart_state_var: opensearch_dashboards_chart_state
+    host: "{{ opensearch_dashboards_host }}"
+    namespace: "{{ logging_namespace }}"
+    service: opensearch-dashboards
+    port: 5601
+
+  - name: opensearch-cluster-master
+    chart_state_var: opensearch_chart_state
+    host: "{{ opensearch_host }}"
+    namespace: "{{ logging_namespace }}"
+    service: opensearch-cluster-master
     port: 9200
     tls: false
     ssl_passthrough: true
@@ -503,7 +534,7 @@ k8s_ingress_apps:
 
 # --- 610_elasticsearch_prepare, 620_elasticsearch ---
 elasticsearch_chart_version: "8.5.1"
-elasticsearch_chart_state: present
+elasticsearch_chart_state: absent
 logging_namespace: logging
 elastic_es_output_host: elasticsearch-master
 elastic_es_output_port: 9200
@@ -527,9 +558,18 @@ elasticsearch_snapshot_s3_protocol: https
 
 # --- 630_kibana_prepare, 640_kibana ---
 kibana_chart_version: "8.5.1"
-kibana_chart_state: present
+kibana_chart_state: absent
 KibanaimageTag: "9.4.4"
 kibana_chart_artifact: "kibana-{{ kibana_chart_version }}.tgz"
+
+# --- 616_opensearch, 626_opensearch_dashboards ---
+opensearch_chart_version: "3.9.0"
+opensearch_chart_state: present
+opensearch_dashboards_chart_version: "3.9.0"
+opensearch_dashboards_chart_state: present
+opensearch_admin: admin
+opensearch_logger: logger
+opensearch_jaeger: jaeger
 
 # --- 650_fluentbit ---
 fluentbit_chart_version: "0.58.1"
@@ -556,12 +596,12 @@ fluentbit_es_trace_error: true
 
 # --- 710_istio ---
 istio_namespace: istio-system
-istio_chart_version: "1.30.3"
+istio_chart_version: "1.31.1"
 istio_chart_state: present
-istio_version: 1.30.3
+istio_version: 1.31.1
 # Istio container images (pulled via harbor docker-hub proxy when hub is docker.io/istio)
 istio_image_hub: docker.io/istio
-istio_image_tag: "1.30.3"   # set to '' for :latest; omit to fall back to istio_version
+istio_image_tag: "1.31.1"   # set to '' for :latest; omit to fall back to istio_version
 # Mesh-wide Telemetry in istio_namespace: provider otel-tracing. Lab default 100; lower in prod.
 istio_tracing_sampling_percentage: 100
 
@@ -586,34 +626,34 @@ kiali_chart_state: present
 # --- 800_chaos_mesh ---
 chaos_mesh_namespace: chaos-mesh
 chaos_mesh_chart_version: "2.8.4"
-chaos_mesh_chart_state: present
+chaos_mesh_chart_state: skip
 
 # --- 810_falco ---
 falco_namespace: falco
 falco_chart_version: "9.1.0"
-falco_chart_state: present
+falco_chart_state: skip
 
 # --- 820_kyverno ---
 kyverno_namespace: kyverno
 kyverno_chart_version: "3.9.0"
-kyverno_chart_state: present
+kyverno_chart_state: skip
 
 # --- 830_policy_reporter ---
 policy_reporter_namespace: policy-reporter
 policy_reporter_chart_version: "3.9.1"
-policy_reporter_chart_state: present
+policy_reporter_chart_state: skip
 
 # --- 980_argocd ---
 argocd_namespace: argocd
 argocd_chart_version: "10.4.0"
-argocd_chart_state: present
+argocd_chart_state: skip
 # argocd_admin_password_bcrypt → atlas-k8s-addons.secrets.yml
 # argocd_oidc_client_secret → atlas-k8s-addons.secrets.yml (Keycloak client argocd)
 
 # --- 982_argocd_rollouts ---
 argo_rollouts_namespace: argo-rollouts
 argo_rollouts_chart_version: "2.41.1"
-argo_rollouts_chart_state: present
+argo_rollouts_chart_state: skip
 
 # --- 910_cloudnative_pg ---
 cnpg_operator_namespace: cnpg-system
@@ -665,7 +705,7 @@ pinniped_login_image: nginx:1.27-alpine
 # Chart mailu/mailu. Web: Envoy OIDC + proxyAuth, HTTPRoute :80 (TLS_FLAVOR=mail). SMTP/IMAP: MetalLB mailu_mx_host.
 mailu_namespace: mailu
 mailu_chart_version: "2.7.3"
-mailu_chart_state: present
+mailu_chart_state: skip
 mailu_domain: "{{ dns_domain_suffix }}"
 mailu_lb_ip: ""
 mailu_clamav_enabled: true
@@ -681,14 +721,14 @@ mailu_unbound_image: ghcr.io/mailu/unbound:2024.06.55
 # Scans kube-system only. Play: after 830_policy_reporter, before 910_cloudnative_pg.
 trivy_namespace: trivy-system
 trivy_chart_version: "0.36.0"
-trivy_chart_state: present
+trivy_chart_state: skip
 
 # --- 954_opencost ---
 # Chart opencost/opencost. UI via Envoy OIDC (961); chart Ingress/HTTPRoute off.
 # Queries kube-prometheus-stack in monitoring. Play: after 840_trivy, before 960_oauth2_proxy.
 opencost_namespace: opencost
 opencost_chart_version: "2.5.30"
-opencost_chart_state: present
+opencost_chart_state: skip
 
 # --- 960_oauth2_proxy ---
 oauth2_proxy_namespace: oauth2-proxy
@@ -767,6 +807,9 @@ k8s_users:
   elastic_logger: "{{ elastic_logger }}"
   elastic_admin: "{{ elastic_admin }}"
   elastic_jaeger: "{{ elastic_jaeger }}"
+  opensearch_admin: "{{ opensearch_admin }}"
+  opensearch_logger: "{{ opensearch_logger }}"
+  opensearch_jaeger: "{{ opensearch_jaeger }}"
   ceph_dashboard: "{{ ceph_dashboard }}"
   vault_admin: "{{ vault_admin }}"
   openbao_admin: "{{ openbao_admin }}"
@@ -796,6 +839,10 @@ k8s_secrets:
   elastic_jaeger_password: "{{ elastic_jaeger_password }}"
   kibana_elastic_password: "{{ kibana_elastic_password }}"
   kibana_encryption_key: "{{ kibana_encryption_key }}"
+  opensearch_admin_password: "{{ opensearch_admin_password }}"
+  opensearch_logger_password: "{{ opensearch_logger_password }}"
+  opensearch_jaeger_password: "{{ opensearch_jaeger_password }}"
+  opensearch_dashboards_cookie_password: "{{ opensearch_dashboards_cookie_password }}"
   argocd_admin_password_bcrypt: "{{ argocd_admin_password_bcrypt }}"
   sentry_smtp_password: "{{ sentry_smtp_password }}"
   sentry_admin_password: "{{ sentry_admin_password }}"

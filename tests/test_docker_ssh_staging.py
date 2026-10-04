@@ -141,6 +141,27 @@ class PrepareContainerSshKeyTest(unittest.TestCase):
         finally:
             prepared.cleanup()
 
+    def test_prepare_replaces_directory_key_with_file(self) -> None:
+        parent = self.staging
+        parent.mkdir(parents=True, exist_ok=True)
+        fixed = parent / "atlas-ssh-fixed"
+        fixed.mkdir()
+        key_dir = fixed / "id_rsa"
+        key_dir.mkdir()
+        key_dir.chmod(0o755)
+        with mock.patch(
+            "clusterctl.docker_executor.tempfile.mkdtemp",
+            return_value=str(fixed),
+        ):
+            prepared = self._prepare()
+        try:
+            self.assertTrue(prepared.key_path.is_file())
+            self.assertFalse(prepared.key_path.is_dir())
+            self.assertEqual(prepared.key_path.read_bytes(), b"unit-test-private-key\n")
+            self.assertEqual(stat.S_IMODE(prepared.key_path.stat().st_mode), 0o600)
+        finally:
+            prepared.cleanup()
+
     def test_prepare_unique_staging_dirs(self) -> None:
         a = self._prepare()
         b = self._prepare()
