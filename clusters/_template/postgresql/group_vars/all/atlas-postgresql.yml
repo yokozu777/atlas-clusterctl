@@ -20,10 +20,12 @@ vip_address: "192.168.1.129"
 # vip_interface: auto (role uses ansible_default_ipv4.interface; override for multi-NIC)
 virtual_router_id: 41
 
-etcd_download_mirror_url: "https://example.com/images/etcd-v3.7.0-linux-amd64.tar.gz"
-# Optional Nexus (or other) mirror — overrides GitHub when set:
+# Served by infra-edge custom nginx (static.<dns>/images/). Warm or first online
+# miss fills /opt/custom-nginx/www/images/ (rsyncable custom-www cache).
+etcd_download_mirror_url: "https://static.{{ dns_domain_suffix }}/images/etcd-{{ etcd_version }}-linux-amd64.tar.gz"
+# Optional Nexus (or other) mirror — overrides the static.* URL when set:
 # etcd_download_mirror_url: "https://nexus.example.com/repository/etcd/etcd-{{ etcd_version }}-linux-amd64.tar.gz"
-etcd_download_use_github_proxy: true
+etcd_download_use_github_proxy: false
 etcd_download_github_proxy: "192.168.1.212:9119"
 etcd_version: v3.7.0
 etcd_client_port: 2379
