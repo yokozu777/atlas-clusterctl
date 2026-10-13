@@ -679,9 +679,9 @@ keycloak_cnpg_storage: 8Gi
 # --- 930_keycloak_realm ---
 # keycloak_tf_workspace — controller-state/staging/keycloak-realm (cluster.yml)
 # Terraform provider from krang image filesystem mirror
+# keycloak_tf_provider_version — SoT in atlas-k8s-addons (do not pin here)
 keycloak_tf_plugin_dir: /usr/local/share/terraform/plugins
 keycloak_tf_plugin_cache_dir: "{{ lookup('env', 'HOME') }}/.terraform.d/plugin-cache"
-keycloak_tf_provider_version: "5.8.0"
 keycloak_oidc_username: admin
 keycloak_oidc_user_email: "admin-oidc@{{ dns_domain_suffix }}"
 keycloak_oidc_user_first_name: Admin

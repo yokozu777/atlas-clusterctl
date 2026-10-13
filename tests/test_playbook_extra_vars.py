@@ -13,6 +13,7 @@ from clusterctl.ansible_runner import AnsibleRunner
 from clusterctl.cluster_vars_loader import (
     materialize_playbook_extra_vars,
     playbook_extra_vars_path,
+    provision_defaults_file,
 )
 from clusterctl.context import ClusterContext
 from clusterctl.pipeline_fixture import local_playbooks_override_block, seed_org_baseline_fixture
@@ -116,6 +117,69 @@ class PlaybookExtraVarsTest(unittest.TestCase):
         self.assertEqual(cmd[cmd.index(f"@{cluster_vars}") - 1], "-e")
         self.assertLess(cmd.index(f"@{cluster_vars}"), cmd.index(f"@{controller_vars}"))
         self.assertLess(cmd.index(f"@{controller_vars}"), cmd.index("override_key=1"))
+
+    def _write_provision_defaults(self, **pins: str) -> Path:
+        defaults = provision_defaults_file(self.root / "atlas-compute-provision")
+        defaults.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "provision_tf_provider_proxmox_version": "3.0.2-rc10",
+            "provision_tf_provider_dns_version": "3.6.2",
+            "provision_tf_provider_local_version": "2.9.1",
+            "provision_dns_a_ttl": 300,
+        }
+        payload.update(pins)
+        defaults.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+        return defaults
+
+    def test_materialize_injects_provision_tf_provider_pins(self) -> None:
+        defaults = self._write_provision_defaults()
+        ctx = ClusterContext.load(cluster_id="lab", executor="local")
+        path = materialize_playbook_extra_vars(
+            ctx.config_dir,
+            ctx.workspace_root,
+            group_var_files=ctx.group_var_files,
+            provision_defaults=defaults,
+        )
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        self.assertEqual(data["provision_tf_provider_dns_version"], "3.6.2")
+        self.assertEqual(data["provision_tf_provider_proxmox_version"], "3.0.2-rc10")
+        self.assertEqual(data["provision_tf_provider_local_version"], "2.9.1")
+        self.assertNotIn("provision_dns_a_ttl", data)
+        self.assertEqual(data["provision_pve_host"], "192.168.1.20")
+
+    def test_materialize_leaf_overrides_provision_tf_provider_pins(self) -> None:
+        defaults = self._write_provision_defaults()
+        leaf = self.cluster / "group_vars" / "all" / "atlas-compute-provision.yml"
+        leaf.write_text(
+            yaml.safe_dump(
+                {
+                    "provision_pve_inventory_group": "proxmox",
+                    "provision_pve_host": "192.168.1.20",
+                    "provision_tf_provider_dns_version": "9.9.9",
+                },
+                sort_keys=False,
+            ),
+            encoding="utf-8",
+        )
+        ctx = ClusterContext.load(cluster_id="lab", executor="local")
+        path = materialize_playbook_extra_vars(
+            ctx.config_dir,
+            ctx.workspace_root,
+            group_var_files=ctx.group_var_files,
+            provision_defaults=defaults,
+        )
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        self.assertEqual(data["provision_tf_provider_dns_version"], "9.9.9")
+        self.assertEqual(data["provision_tf_provider_proxmox_version"], "3.0.2-rc10")
+
+    def test_ansible_runner_materialize_reads_provision_defaults(self) -> None:
+        self._write_provision_defaults(provision_tf_provider_dns_version="3.6.2")
+        ctx = ClusterContext.load(cluster_id="lab", executor="local")
+        runner = AnsibleRunner(ctx)
+        path = runner._ensure_playbook_extra_vars()
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        self.assertEqual(data["provision_tf_provider_dns_version"], "3.6.2")
+        self.assertEqual(data["provision_tf_provider_local_version"], "2.9.1")
 
 
 if __name__ == "__main__":

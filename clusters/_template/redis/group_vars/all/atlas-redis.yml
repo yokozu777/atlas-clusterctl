@@ -22,12 +22,14 @@ redis_cluster_bus_port: 16379
 redis_cluster_replicas_per_master: 1
 redis_cluster_create_mode: auto
 
-# Lab: no auth. Set for production.
+# Auth: redis_requirepass in atlas-redis.secrets.yml (lab default CHANGEME).
 
 # Redis source tarball for controller build (role 200_redis_node).
-# Optional HTTP(S) mirror — overrides GitHub when set (lab SoT; not a sibling default):
-# redis_download_mirror_url: "https://mirror.example.com/redis/redis-{{ redis_version }}.tar.gz"
-redis_download_mirror_url: "https://example.com/images/8.8.0.tar.gz"
+# Served by infra-edge custom nginx (static.<dns>/images/). Warm or first online
+# miss fills /opt/custom-nginx/www/images/ (rsyncable custom-www cache).
+redis_download_mirror_url: "https://static.{{ dns_domain_suffix }}/images/redis-{{ redis_version }}.tar.gz"
+# Optional Nexus (or other) mirror — overrides the static.* URL when set:
+# redis_download_mirror_url: "https://nexus.example.com/repository/redis/redis-{{ redis_version }}.tar.gz"
 redis_download_use_github_proxy: false
 redis_download_github_proxy: "192.168.1.212:9119"
 

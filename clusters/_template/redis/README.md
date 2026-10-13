@@ -26,7 +26,7 @@ Edit after init:
    prefix (`redis.`) is template-owned — edit overlays to change it
 2. `group_vars/all/atlas-compute-provision.yml` — PVE/DNS credentials, VM templates
 3. `group_vars/all/atlas-redis.yml` — VIP address/interface, Redis/Predixy version, `redis_*_hosts`, optional HTTP mirrors
-4. `group_vars/all/atlas-redis.secrets.yml` — `vip_auth_pass` (prefer Ansible Vault; max 8 chars)
+4. `group_vars/all/atlas-redis.secrets.yml` — `vip_auth_pass` (max 8 chars) and `redis_requirepass` (lab default `CHANGEME`; Redis + Predixy)
 5. `group_vars/all/atlas-node-foundation.yml` — `pkg_repos` + `node_foundation_init_hosts`
 6. `hosts` — nested `redis` → `redis_*` VM layout
 
@@ -40,8 +40,9 @@ Inventory groups:
 | `redis_proxies` | Predixy cluster proxy (>=2) |
 | `redis_lbs` | HAProxy + Keepalived VIP (>=2) |
 
-Lab mirrors and VIP address live in clusterctl `atlas-redis.yml`; Keepalived pass in
-`atlas-redis.secrets.yml`. Sibling product defaults stay org-neutral (`CHANGEME` / empty mirrors).
+Lab mirrors and VIP address live in clusterctl `atlas-redis.yml`; Keepalived pass and
+`redis_requirepass` in `atlas-redis.secrets.yml`. Sibling product defaults stay org-neutral
+(`CHANGEME` / empty mirrors).
 
 Regenerate this scaffold from a lab (maintainer; scrub hostnames/secrets after):
 

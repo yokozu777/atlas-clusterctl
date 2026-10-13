@@ -19,9 +19,11 @@ kafka_broker_port: 9092
 kafka_controller_port: 9093
 kafka_security_mode: plaintext
 
-# Optional HTTP(S) mirror — overrides Apache downloads when set (lab SoT; not a sibling default):
-# kafka_download_mirror_url: "https://mirror.example.com/kafka/kafka_2.13-4.3.1.tgz"
-kafka_download_mirror_url: ""
+# Served by infra-edge custom nginx (static.<dns>/images/). Warm or first online
+# miss fills /opt/custom-nginx/www/images/ (rsyncable custom-www cache).
+kafka_download_mirror_url: "https://static.{{ dns_domain_suffix }}/images/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tgz"
+# Optional Nexus (or other) mirror — overrides the static.* URL when set:
+# kafka_download_mirror_url: "https://nexus.example.com/repository/kafka/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tgz"
 kafka_download_url: ""
 
 kafka_heap_opts: "-Xms1G -Xmx1G"

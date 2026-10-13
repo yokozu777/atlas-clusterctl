@@ -5,11 +5,16 @@ from __future__ import annotations
 import os
 import subprocess
 from pathlib import Path
-from clusterctl.cluster_vars_loader import materialize_playbook_extra_vars
+from clusterctl.cluster_vars_loader import (
+    COMPUTE_PROVISION_REPO_NAME,
+    materialize_playbook_extra_vars,
+    provision_defaults_file,
+)
 from clusterctl.controller_extra_vars import materialize_controller_extra_vars
 from clusterctl.context import ClusterContext
 from clusterctl.exceptions import ClusterctlError
 from clusterctl.logging_util import RunLogSession, run_subprocess_logged
+from clusterctl.playbooks_paths import resolve_repo_base
 from clusterctl.playbooks_resolve import effective_playbooks_config
 from clusterctl.playbooks_requirements import (
     PLAYBOOK_REQUIREMENTS_ENV,
@@ -40,7 +45,6 @@ class AnsibleRunner:
     def bootstrap(self, *, dry_run: bool = False) -> None:
         if self._bootstrapped:
             return
-        self._ensure_playbook_extra_vars()
         assert_no_legacy_repo_root_ansible(self.ctx.repo_root)
         if not dry_run:
             ensure_workspace_ansible_dirs(self.ctx.workspace_root)
@@ -48,7 +52,9 @@ class AnsibleRunner:
                 inside_docker_container=is_inside_docker_container(),
             ) == "container":
                 ensure_container_controller_tmp_dir(self.ctx.workspace_id)
+        # Sync before materialize so git checkouts expose provision_defaults.yml.
         self._sync_repos(dry_run=dry_run)
+        self._ensure_playbook_extra_vars()
         if dry_run:
             req_files = self._discover_playbook_requirements_files()
             print(
@@ -157,12 +163,30 @@ class AnsibleRunner:
             playbooks = self._effective_playbooks()
         run_phase_stages(self, plan.stages, playbooks=playbooks, dry_run=dry_run)
 
+    def _resolve_provision_defaults(self) -> Path | None:
+        """SoT path for TF provider pins when atlas-compute-provision is configured."""
+        playbooks = self._effective_playbooks()
+        spec = playbooks.repos.get(COMPUTE_PROVISION_REPO_NAME)
+        if spec is None:
+            return None
+        try:
+            base = resolve_repo_base(
+                spec,
+                workspace_root=self.ctx.workspace_root,
+                repo_root_path=self.ctx.repo_root,
+            )
+        except ClusterctlError:
+            return None
+        path = provision_defaults_file(base)
+        return path if path.is_file() else None
+
     def _ensure_playbook_extra_vars(self) -> Path:
         if self._playbook_extra_vars_path is None:
             self._playbook_extra_vars_path = materialize_playbook_extra_vars(
                 self.ctx.config_dir,
                 self.ctx.workspace_root,
                 group_var_files=self.ctx.group_var_files,
+                provision_defaults=self._resolve_provision_defaults(),
             )
         return self._playbook_extra_vars_path
 
