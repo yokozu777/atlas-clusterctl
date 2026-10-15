@@ -14,10 +14,9 @@ jenkins_url: https://jenkins.example.com
 jenkins_admin_user: admin
 # Override in atlas-jenkins-agent.secrets.yml (ansible-vault recommended)
 
-# CA for Jenkins controller TLS (jenkins.example.com).
-# OS trust installs both roots via foundation pki_ca_url; this path is the
-# ca.example.com file used for Java/curl to the controller.
-jenkins_ca_cert_path: "/usr/local/share/ca-certificates/ca-example-com.crt"
+# CA for Jenkins controller TLS — SoT is the download URL (or pki_ca_url).
+# Role installs into distro trust dir; filename from URL hostname
+# (ca.example.com → ca-example-com.crt).
 jenkins_ca_cert_download_url: "https://ca.example.com:8443/roots.pem"
 
 jenkins_agent_num_executors: 5

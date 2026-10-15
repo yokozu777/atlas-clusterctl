@@ -20,11 +20,9 @@ gitlab_runner_token_auto_create: true
 gitlab_runner_api_runner_type: instance_type
 # Override token in atlas-gitlab-runner.secrets.yml (ansible-vault recommended)
 
-# CA for GitLab TLS — foundation-style fetch into distro trust dir.
-# Path value is a basename hint only (ca-example-com.crt); role resolves
-# Debian → /usr/local/share/ca-certificates/, OL → anchors (same as 11_certificates).
-# URLs: pki_ca_url (foundation overlay) + optional download_url below.
-gitlab_runner_ca_cert_path: "/usr/local/share/ca-certificates/ca-example-com.crt"
+# CA for GitLab TLS — SoT is the download URL (or pki_ca_url).
+# Role installs into distro trust dir; filename from URL hostname
+# (ca.example.com → ca-example-com.crt). Same URL feeds API auto-create TLS on the controller.
 gitlab_runner_ca_cert_download_url: "https://ca.example.com:8443/roots.pem"
 
 gitlab_runner_concurrent: 4
