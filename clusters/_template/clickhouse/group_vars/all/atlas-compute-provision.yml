@@ -1,0 +1,17 @@
+# Cluster leaf: _template/clickhouse — atlas-compute-provision overlay
+
+dns_domain_suffix: example.com
+cluster_domain: "clickhouse.{{ dns_domain_suffix }}"
+
+provision_stack: clickhouse
+provision_mode: recreate
+
+provision_hosts_file: "{{ cluster_inventory | default(cluster_config_dir ~ '/hosts', true) }}"
+provision_inventory_group_map_clickhouse:
+  ch_keeper: ch_keeper_node
+  ch_cluster: ch_cluster_node
+  ch_lbs: ch_lbs_node
+provision_tf_module_map_clickhouse:
+  ch_keeper_node: proxmox_ch_keeper
+  ch_cluster_node: proxmox_ch_cluster
+  ch_lbs_node: proxmox_ch_lbs

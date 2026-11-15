@@ -27,6 +27,12 @@ PHASE_INTENT_REFS: dict[str, frozenset[str]] = {
     "postgresql": frozenset({"atlas-postgresql/cluster"}),
     "redis": frozenset({"atlas-redis/cluster"}),
     "kafka": frozenset({"atlas-kafka/cluster"}),
+    "ceph": frozenset({"atlas-ceph/cluster"}),
+    "devops": frozenset({"atlas-devops-stack/stack"}),
+    "mlops": frozenset({"atlas-mlops-stack/stack"}),
+    "soc": frozenset({"atlas-soc-stack/stack"}),
+    "clickhouse": frozenset({"atlas-clickhouse/cluster"}),
+    "mongodb": frozenset({"atlas-mongodb/cluster"}),
 }
 
 
@@ -40,11 +46,28 @@ class PhaseIntent:
     mysql: bool
     redis: bool
     kafka: bool
+    ceph: bool
+    devops: bool
+    mlops: bool
     provision_stack: str
+    soc: bool = False
+    clickhouse: bool = False
+    mongodb: bool = False
 
     @property
     def data(self) -> bool:
-        return self.postgresql or self.mysql or self.redis or self.kafka
+        return (
+            self.postgresql
+            or self.mysql
+            or self.redis
+            or self.kafka
+            or self.ceph
+            or self.devops
+            or self.mlops
+            or self.soc
+            or self.clickhouse
+            or self.mongodb
+        )
 
 
 def _provision_stack(merged_vars: dict) -> str:
@@ -70,5 +93,11 @@ def infer_phase_intent(
         mysql=provision_stack == "mysql",
         redis=_has("redis"),
         kafka=_has("kafka"),
+        ceph=_has("ceph"),
+        devops=_has("devops"),
+        mlops=_has("mlops"),
         provision_stack=provision_stack,
+        soc=_has("soc"),
+        clickhouse=_has("clickhouse"),
+        mongodb=_has("mongodb"),
     )

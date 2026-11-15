@@ -70,9 +70,14 @@ _OVERLAY_STACK_DOCS: dict[str, str] = {
     "atlas-infra-edge.yml": "docs/stacks/infra-edge.md",
     "atlas-jenkins-agent.yml": "docs/stacks/jenkins-agent.md",
     "atlas-gitlab-runner.yml": "docs/stacks/gitlab-runner.md",
+    "atlas-clickhouse.yml": "docs/stacks/clickhouse.md",
+    "atlas-mongodb.yml": "docs/stacks/mongodb.md",
     "atlas-postgresql.yml": "docs/stacks/postgresql.md",
     "atlas-redis.yml": "docs/stacks/redis.md",
     "atlas-kafka.yml": "docs/stacks/kafka.md",
+    "atlas-devops-stack.yml": "docs/stacks/devops-stack.md",
+    "atlas-mlops-stack.yml": "docs/stacks/mlops-stack.md",
+    "atlas-soc-stack.yml": "docs/stacks/soc-stack.md",
 }
 
 _VAULT_SCRUB_STUB = (
@@ -87,9 +92,15 @@ KNOWN_TEMPLATE_NAMES = (
     "infra_edge",
     "jenkins_agent",
     "gitlab_runner",
+    "clickhouse",
+    "mongodb",
     "postgresql",
     "redis",
     "kafka",
+    "ceph",
+    "devops_stack",
+    "mlops_stack",
+    "soc_stack",
     "pve_templates",
     "default",
 )

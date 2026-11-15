@@ -19,8 +19,25 @@ REDIS_GROUPS = frozenset(
     {"redis_cluster_masters", "redis_cluster_replicas", "redis_proxies", "redis_lbs"}
 )
 KAFKA_GROUPS = frozenset({"kafka_controllers", "kafka_brokers"})
-# Working inventory groups with VM hosts (parent ``postgresql``/``redis``/``kafka`` is not a data group).
-DATA_GROUPS = PGSQL_GROUPS | MYSQL_GROUPS | REDIS_GROUPS | KAFKA_GROUPS
+CEPH_GROUPS = frozenset({"ceph_nodes"})
+DEVOPS_GROUPS = frozenset({"devops_stack"})
+MLOPS_GROUPS = frozenset({"mlops_stack"})
+SOC_GROUPS = frozenset({"soc_stack"})
+CH_GROUPS = frozenset({"ch_keeper", "ch_cluster", "ch_lbs"})
+MONGO_GROUPS = frozenset({"mongo_cluster"})
+# Working inventory groups with VM hosts (parent groups are not data groups).
+DATA_GROUPS = (
+    PGSQL_GROUPS
+    | MYSQL_GROUPS
+    | REDIS_GROUPS
+    | KAFKA_GROUPS
+    | CEPH_GROUPS
+    | DEVOPS_GROUPS
+    | MLOPS_GROUPS
+    | SOC_GROUPS
+    | CH_GROUPS
+    | MONGO_GROUPS
+)
 
 
 def _walk_hosts(node: object, found: set[str]) -> None:

@@ -1,0 +1,28 @@
+all:
+  children:
+    soc:
+      children:
+        soc_stack:
+          hosts:
+            192.168.1.192:
+              hostname: soc-01.soc.example.com
+              soc_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5921
+              provision:
+                vmid: "5921"
+                sockets: 1
+                cores: 16
+                memory: 65536
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+                  - size: "500"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5921"
+                    serial: drive5921
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_user: localuser

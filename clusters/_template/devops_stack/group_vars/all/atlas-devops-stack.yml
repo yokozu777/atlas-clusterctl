@@ -1,0 +1,113 @@
+# DevOps compose stack lab application vars (atlas-devops-stack roles 200–211)
+# Orchestration contract: docs/stacks/devops-stack.md
+#
+# Inventory group name for sibling playbook targeting (keep in sync with hosts + cluster.yaml limits).
+
+# Leaf DNS identity
+# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+dns_domain_suffix: example.com
+cluster_domain: "devops.{{ dns_domain_suffix }}"
+
+devops_stack_hosts: devops_stack
+
+# Vhost labels. Public names are <label>.<cluster_domain>.
+devops_vhost_labels:
+  - nexus
+  - gitlab
+  - jenkins
+  - gitea
+  - sonar
+  - defectdojo
+  - openbao
+  - wiki
+  - harbor
+  - portainer
+  - heimdall
+  - cloudbeaver
+  - kafbat
+  - redisinsight
+devops_vhost_fqdns: "{{ devops_vhost_labels | product(['.' ~ cluster_domain]) | map('join') | list }}"
+
+# Second data disk is mounted here. Docker data-root and the Compose project live under it.
+devops_data_mount: /var/lib/devops-data
+devops_install_dir: /var/lib/devops-data/atlas-devops-stack
+
+# Published on the host by nginx only. HTTP redirects to HTTPS.
+# 2222 and 2223 are nginx stream listeners, not container ports of GitLab or Gitea.
+devops_http_port: 80
+devops_https_port: 443
+devops_gitlab_ssh_port: 2222
+devops_gitea_ssh_port: 2223
+
+# Leaf certificate issued by step-ca (or any CA the host trusts after init
+# role 11_certificates). When either file is missing, role 210 writes a
+# self-signed certificate for the vhost names.
+devops_tls_cert_file: /etc/atlas/certs/devops-fullchain.crt
+devops_tls_key_file: /etc/atlas/certs/devops.key
+
+devops_firewalld_enabled: true
+
+# Pinned community / OSS tags. Do not float to latest.
+devops_image_nginx: nginx:1.28.3
+devops_image_nexus: sonatype/nexus3:3.98.0
+devops_image_gitlab: gitlab/gitlab-ce:18.11.14-ce.0
+devops_image_jenkins: jenkins/jenkins:2.580.2-lts-jdk21
+devops_image_gitea: gitea/gitea:1.24.7
+devops_image_sonarqube: sonarqube:26.10.0.133078-community
+devops_image_defectdojo: defectdojo/defectdojo-django:2.49.3
+devops_image_openbao: openbao/openbao:2.7.2
+devops_image_wiki: requarks/wiki:2.5.317
+devops_image_portainer: portainer/portainer-ce:2.45.3
+devops_image_heimdall: linuxserver/heimdall:2.8.4
+devops_image_cloudbeaver: dbeaver/cloudbeaver:26.2.4
+devops_image_kafbat: ghcr.io/kafbat/kafka-ui:v1.5.0
+devops_image_redisinsight: redis/redisinsight:3.8.0
+devops_image_postgres: postgres:16.10-alpine
+devops_image_redis: redis:7.4-alpine
+# Shared tag for goharbor/* images (core, portal, registry, jobservice, db, redis).
+devops_image_harbor: v2.14.6
+
+devops_gitea_admin_user: atlas
+devops_jenkins_admin_user: admin
+devops_defectdojo_admin_user: admin
+devops_harbor_admin_user: admin
+devops_openbao_admin_user: admin
+# After reboot, unseal OpenBao with the key stored at first init.
+devops_openbao_autounseal: true
+
+# present installs, skip leaves existing containers alone, absent removes them.
+# nginx is not in this list and is always installed.
+devops_nexus_state: present
+devops_gitlab_state: present
+devops_jenkins_state: present
+devops_gitea_state: present
+devops_sonarqube_state: present
+devops_defectdojo_state: present
+devops_openbao_state: present
+devops_wiki_state: present
+devops_harbor_state: present
+devops_portainer_state: present
+devops_heimdall_state: present
+devops_cloudbeaver_state: present
+devops_kafbat_state: present
+devops_redisinsight_state: present
+
+# BIND apex updates. The TSIG secret is devops_dns_tsig_secret.
+devops_dns_server: "{{ dns_server_ip | default('') }}"
+devops_dns_zone: "{{ dns_domain_suffix | default('example.com') }}"
+devops_dns_tsig_key: "{{ dns_domain_suffix | default('example.com') }}"
+devops_dns_tsig_algorithm: hmac-sha256
+devops_dns_ttl: 300
+
+# step-ca leaf for nginx. The provisioner password is devops_stepca_provisioner_password.
+devops_stepca_host: "{{ pki_ca_host | default('ca.' ~ (dns_domain_suffix | default('example.com'))) }}"
+devops_stepca_port: "{{ stepca_https_port | default(8443) }}"
+devops_stepca_provisioner: "{{ stepca_init_provisioner_name | default('admin') }}"
+devops_stepca_image: "{{ stepca_image | default('smallstep/step-ca:0.28.4') }}"
+devops_stepca_duration: 2160h
+
+# Probe budget. Other vhosts use the short budget. GitLab omnibus uses the long one.
+devops_verify_retries: 60
+devops_verify_delay: 10
+devops_gitlab_verify_retries: 120
+devops_gitlab_verify_delay: 15

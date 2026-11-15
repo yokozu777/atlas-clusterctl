@@ -1,0 +1,32 @@
+###############################################################################
+# Cluster leaf: _template/ceph — atlas-compute-provision overlay
+# -----------------------------------------------------------------------------
+# Purpose : Proxmox VM / DNS / TF state knobs for this leaf
+# Defaults: sibling playbooks/group_vars/all/provision_defaults.yml
+# Docs    : docs/stacks/compute-provision.md
+#
+# Prefer atlas-compute-provision.secrets.yml (or Vault) for tokens/passwords.
+###############################################################################
+
+# =============================================================================
+# Stack
+# =============================================================================
+# TF layout under stacks/<name>/ — ceph leaf (colocated nodes).
+
+# Leaf DNS identity
+# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+dns_domain_suffix: example.com
+cluster_domain: "ceph.{{ dns_domain_suffix }}" # Cluster FQDN, usually a name under the DNS suffix
+
+provision_stack: ceph
+# Lifecycle: apply | recreate | destroy
+provision_mode: recreate
+
+# =============================================================================
+# Inventory → Terraform maps
+# =============================================================================
+provision_hosts_file: "{{ cluster_inventory | default(cluster_config_dir ~ '/hosts', true) }}"
+provision_inventory_group_map_ceph:
+  ceph_nodes: ceph_node
+provision_tf_module_map_ceph:
+  ceph_node: proxmox_ceph_node

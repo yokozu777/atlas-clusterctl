@@ -1,0 +1,169 @@
+# Public scaffold ``_template/devops_stack`` (maintainer-authored; export_template optional).
+# Init: ./cluster init <env>/<name> --template devops_stack
+#
+# Scrub live hostnames / secrets before committing the public template.
+
+# Reference deployable DevOps compose stack — provision → init → devops.
+# One VM. nginx publishes 80/443 and stream 2222/2223.
+
+schema_version: 2
+id: ''
+display_name: null
+playbooks:
+  atlas-compute-provision:
+    source: git
+    layout: roles/
+    shallow: true
+    sync: always
+    url: https://github.com/yokozu777/atlas-compute-provision.git
+    ref: main
+    entries:
+      templates:
+        file: playbooks/build_templates.yaml
+        invocations:
+        - tags: 00_ensure_workspace
+        - tags: 00_check_pve_templates,01_prepare_system
+        - tags: 02_download_images
+        - tags: 03_customize_images
+        - tags: 04_upload_images
+        - tags: 05_create_pve_templates
+        ansible:
+          strategy: linear
+          forks: 100
+      provision:
+        file: playbooks/provision_nodes.yaml
+        invocations:
+        - tags: 00_ensure_workspace
+        - tags: 00_validate_provision
+        - tags: 06_configure_git
+        - tags: 07_tf_state_pull
+        - tags: 08_generate_tf_vars
+        - tags: 09a_tf_destroy_dns
+        - tags: 09_hypervisor_cleaner
+        - tags: 10_tf_apply
+        - tags: provision_wait_ssh
+          root_ssh: true
+        - tags: 11_tf_state_push
+        git_ssh: true
+        ansible:
+          strategy: linear
+          forks: 100
+    path: atlas-compute-provision
+    path_relative_to: sibling
+  atlas-node-foundation:
+    source: git
+    layout: roles/
+    shallow: true
+    sync: always
+    url: https://github.com/yokozu777/atlas-node-foundation.git
+    ref: main
+    entries:
+      init:
+        file: playbooks/init_nodes.yaml
+        invocations:
+        - tags: 00_ensure_workspace
+        - tags: 00_gather_facts,00_init,01_backup_etc,02_init_sshd,03_configure_users,04_configure_hostname
+          limit: devops_stack
+          root_ssh: true
+        - tags: 07_configure_network_dns
+          limit: devops_stack
+          root_ssh: true
+        - tags: 11_certificates
+          limit: devops_stack
+          root_ssh: true
+        - tags: 13_configure_repo
+          limit: devops_stack
+          root_ssh: true
+        - tags: 06_configure_kernel,08_configure_security,09_configure_locales,10_manage_services
+          limit: devops_stack
+          root_ssh: true
+        - tags: 14_install_software,15_configure_journald,16_configure_bash
+          limit: devops_stack
+          root_ssh: true
+        - tags: 19_configure_sysctl_limits,20_disable_swap,21_grow_disk_to_full,22_extend_swap_to_root
+          limit: devops_stack
+          root_ssh: true
+        - tags: 23_init_data_disk
+          limit: devops_stack
+          root_ssh: true
+        - tags: 17_configure_network
+          limit: devops_stack
+          root_ssh: true
+        - tags: 18_remove_unwanted_services
+          limit: devops_stack
+          root_ssh: true
+        - tags: 12_date_timezone
+          limit: devops_stack
+          root_ssh: true
+        - tags: 99_update_reboot
+          limit: devops_stack
+          root_ssh: true
+        git_ssh: true
+        when:
+          inventory_groups_any:
+          - devops_stack
+    path: atlas-node-foundation
+    path_relative_to: sibling
+  atlas-devops-stack:
+    source: git
+    layout: roles/
+    shallow: true
+    sync: always
+    url: https://github.com/yokozu777/atlas-devops-stack.git
+    ref: main
+    entries:
+      stack:
+        file: playbooks/devops_stack.yaml
+        invocations:
+        - tags: 00_ensure_workspace
+        - tags: 01_validate_vars
+        - tags: 200_docker
+          limit: devops_stack
+        - tags: 210_compose_render
+          limit: devops_stack
+        - tags: 211_nginx
+          limit: devops_stack
+        - tags: 220_nexus
+          limit: devops_stack
+        - tags: 221_gitlab
+          limit: devops_stack
+        - tags: 222_jenkins
+          limit: devops_stack
+        - tags: 223_gitea
+          limit: devops_stack
+        - tags: 224_sonarqube
+          limit: devops_stack
+        - tags: 225_defectdojo
+          limit: devops_stack
+        - tags: 226_openbao
+          limit: devops_stack
+        - tags: 227_wiki
+          limit: devops_stack
+        - tags: 228_harbor
+          limit: devops_stack
+        - tags: 229_portainer
+          limit: devops_stack
+        - tags: 230_heimdall
+          limit: devops_stack
+        - tags: 231_cloudbeaver
+          limit: devops_stack
+        - tags: 232_kafbat
+          limit: devops_stack
+        - tags: 233_redisinsight
+          limit: devops_stack
+        git_ssh: true
+        when:
+          inventory_groups_any:
+          - devops_stack
+    path: atlas-devops-stack
+    path_relative_to: sibling
+phases:
+- provision: atlas-compute-provision/provision
+- init: atlas-node-foundation/init
+- devops: atlas-devops-stack/stack
+execution:
+  mode: docker
+  image: yokozu/krang
+  tag: latest
+cluster_id_aliases: {}
+inventory: hosts

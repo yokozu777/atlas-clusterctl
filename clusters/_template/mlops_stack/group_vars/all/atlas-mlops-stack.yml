@@ -1,0 +1,91 @@
+# MLOps compose stack lab application vars
+# Orchestration contract: docs/stacks/mlops-stack.md
+
+# atlas-mlops-stack — variable catalog for standalone runs
+# Secrets: group_vars/all/atlas-mlops-stack.secrets.yml
+# Disk: set mlops_data_disk on the host, not in this file.
+
+mlops_stack_hosts: mlops_stack
+
+dns_domain_suffix: example.com
+cluster_domain: "mlops.{{ dns_domain_suffix }}"
+cluster_workspace_id: "{{ lookup('ansible.builtin.env', 'CLUSTER_WORKSPACE_ID') | default(cluster_domain, true) }}"
+cluster_workspace_parent: ./workspace
+cluster_workspace_root: "{{ cluster_workspace_parent }}/{{ cluster_workspace_id }}"
+
+ansible_user: localuser
+
+mlops_vhost_labels:
+  - jupyterhub
+  - mlflow
+  - airflow
+  - superset
+  - portainer
+  - evidently
+  - heimdall
+mlops_vhost_fqdns: "{{ mlops_vhost_labels | product(['.' ~ cluster_domain]) | map('join') | list }}"
+
+mlops_data_mount: /var/lib/mlops-data
+mlops_install_dir: /var/lib/mlops-data/atlas-mlops-stack
+mlops_http_port: 80
+mlops_https_port: 443
+mlops_firewalld_enabled: true
+
+mlops_image_nginx: nginx:1.28.3
+mlops_image_postgres: postgres:16.10-alpine
+mlops_image_redis: redis:7.4-alpine
+mlops_image_jupyterhub: jupyterhub/jupyterhub:6.1.1
+mlops_image_jupyter_notebook: quay.io/jupyter/base-notebook:2026-11-02
+mlops_image_dockerspawner: "14.0.0"
+mlops_image_mlflow: ghcr.io/mlflow/mlflow:v3.17.2
+mlops_mlflow_psycopg_version: "3.3.8"
+mlops_image_airflow: apache/airflow:3.1.5
+mlops_image_superset: apache/superset:6.0.0
+mlops_superset_psycopg2_version: "2.9.11"
+mlops_image_portainer: portainer/portainer-ce:2.45.3
+mlops_image_evidently: evidently/evidently-service:0.7.23
+mlops_image_heimdall: linuxserver/heimdall:2.8.4
+
+mlops_jupyterhub_state: present
+mlops_mlflow_state: present
+mlops_airflow_state: present
+mlops_superset_state: present
+mlops_portainer_state: present
+mlops_evidently_state: present
+mlops_heimdall_state: present
+
+mlops_jupyterhub_admin_user: admin
+mlops_mlflow_admin_user: admin
+mlops_airflow_admin_user: admin
+mlops_superset_admin_user: admin
+
+mlops_secret_pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{7,}$"
+mlops_http_ok_codes:
+  - 200
+  - 201
+  - 204
+  - 301
+  - 302
+  - 303
+  - 307
+  - 308
+  - 401
+  - 403
+mlops_verify_retries: 60
+mlops_verify_delay: 10
+
+mlops_dns_server: "{{ dns_server_ip | default('') }}"
+mlops_dns_zone: "{{ dns_domain_suffix | default('example.com') }}"
+mlops_dns_tsig_key: "{{ dns_domain_suffix | default('example.com') }}"
+mlops_dns_tsig_algorithm: hmac-sha256
+mlops_dns_ttl: 300
+
+mlops_stepca_enabled: true
+mlops_stepca_host: "{{ pki_ca_host | default('ca.' ~ (dns_domain_suffix | default('example.com'))) }}"
+mlops_stepca_port: "{{ stepca_https_port | default(8443) }}"
+mlops_stepca_provisioner: "{{ stepca_init_provisioner_name | default('admin') }}"
+mlops_stepca_image: "{{ stepca_image | default('smallstep/step-ca:0.28.4') }}"
+mlops_stepca_duration: 2160h
+mlops_tls_cert_file: /etc/atlas/certs/mlops-fullchain.crt
+mlops_tls_key_file: /etc/atlas/certs/mlops.key
+mlops_tls_days: "825"

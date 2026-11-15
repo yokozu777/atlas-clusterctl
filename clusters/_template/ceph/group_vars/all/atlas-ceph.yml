@@ -1,0 +1,33 @@
+# Ceph cephadm HA lab application vars (atlas-ceph roles 200–206)
+# Orchestration contract: docs/stacks/ceph.md
+#
+# Inventory group names for sibling playbook targeting (keep in sync with hosts + cluster.yaml limits).
+
+# Leaf DNS identity
+# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+dns_domain_suffix: example.com
+cluster_domain: "ceph.{{ dns_domain_suffix }}"
+
+ceph_node_hosts: ceph_nodes
+ceph_mon_hosts: ceph_nodes
+ceph_osd_hosts: ceph_nodes
+ceph_rgw_hosts: ceph_nodes
+ceph_bootstrap_hosts: ceph_nodes
+
+ceph_release: tentacle
+ceph_container_image: quay.io/ceph/ceph:v20.2.5
+# Infra-edge pull-through vhost for quay.io (same slug as containerd mirrors).
+ceph_registry_mirror: "quay.io.registry.{{ dns_domain_suffix }}"
+ceph_rgw_port: 7480
+ceph_dashboard_enabled: true
+ceph_osd_all_available_devices: false
+# Do not set ceph_osd_devices here. clusterctl passes this file as ansible -e,
+# which overrides the per-host paths in hosts (for example /dev/disk/by-id/wwn-…).
+
+# Optional mirror for cephadm binary (empty = download.ceph.com)
+ceph_repo_mirror_url: ""
+ceph_cephadm_url: ""
+
+ceph_s3_user: atlas-s3
+ceph_s3_bucket: atlas-verify
+ceph_s3_create_bucket: true

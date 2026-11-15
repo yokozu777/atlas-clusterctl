@@ -48,6 +48,8 @@ Per-stack orchestration (phases, inventory, vars bridge): **[stacks/README.md](s
 | [postgresql.md](stacks/postgresql.md) | PostgreSQL HA (`atlas-postgresql`) |
 | [redis.md](stacks/redis.md) | Redis Cluster HA (`atlas-redis`) |
 | [kafka.md](stacks/kafka.md) | Kafka KRaft HA (`atlas-kafka`) |
+| [ceph.md](stacks/ceph.md) | Ceph cephadm HA + S3 (`atlas-ceph`) |
+| [devops-stack.md](stacks/devops-stack.md) | DevOps Compose stack behind nginx (`atlas-devops-stack`) |
 
 ## Quick start
 
@@ -82,6 +84,18 @@ Data-plane / agent scaffolds:
 ./cluster use demo/kafka
 # ./cluster run --phases provision..kafka
 # ./cluster run --phases kafka --tags 203_kafka_verify --limit kafka_brokers
+
+# Ceph cephadm + S3 (see stacks/ceph.md)
+./cluster init demo/ceph --template ceph
+./cluster use demo/ceph
+# ./cluster run --phases provision..ceph
+# ./cluster run --phases ceph --tags 206_ceph_verify --limit ceph_nodes
+
+# DevOps compose stack (see stacks/devops-stack.md)
+./cluster init demo/devops --template devops_stack
+./cluster use demo/devops
+# ./cluster run --phases provision..devops
+# ./cluster run --phases devops --tags 220_nexus --limit devops_stack
 
 # Jenkins agents (see stacks/jenkins-agent.md)
 ./cluster init demo/jenkins --template jenkins_agent

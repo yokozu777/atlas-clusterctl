@@ -47,6 +47,7 @@ all:
           hosts:
             192.168.1.123:
               hostname: pgsql-01.example.com
+              pgsql_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5701
               provision:
                 vmid: "5701"
                 sockets: 1
@@ -58,8 +59,14 @@ all:
                   - size: "100"
                     slot: 0
                     storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5701"
+                    serial: drive5701
             192.168.1.124:
               hostname: pgsql-02.example.com
+              pgsql_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5705
               provision:
                 vmid: "5705"
                 sockets: 1
@@ -71,8 +78,14 @@ all:
                   - size: "100"
                     slot: 0
                     storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5705"
+                    serial: drive5705
             192.168.1.125:
               hostname: pgsql-03.example.com
+              pgsql_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5706
               provision:
                 vmid: "5706"
                 sockets: 1
@@ -84,6 +97,11 @@ all:
                   - size: "100"
                     slot: 0
                     storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5706"
+                    serial: drive5706
         pgsql_lbs:
           hosts:
             192.168.1.120:

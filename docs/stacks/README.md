@@ -6,7 +6,10 @@ Per-stack docs for `./cluster` phases: inventory groups, vars bridge, tags, and 
   Golden images:  templates                         (pve_templates leaf)
   Full k8s:       provision --> init --> k8s-core --> k8s-addons
   Infra-only:     provision --> init-infra --> infra --> init-infra-post
-  Data-plane:     provision --> init --> postgresql|redis|kafka
+  Data-plane:     provision --> init --> postgresql|clickhouse|mongodb|redis|kafka|ceph
+  DevOps:         provision --> init --> devops
+  MLOps:          provision --> init --> mlops
+  SOC:            provision --> init --> soc
   Agents:         provision --> init --> jenkins-agent
 ```
 
@@ -25,15 +28,21 @@ Point k8s `dns_server_ip` / NTP at that node after it is up.
 | [jenkins-agent.md](jenkins-agent.md) | `atlas-jenkins-agent` | `jenkins_agent` |
 | [gitlab-runner.md](gitlab-runner.md) | `atlas-gitlab-runner` | `gitlab_runner` |
 | [postgresql.md](postgresql.md) | `atlas-postgresql` | `postgresql` |
+| [clickhouse.md](clickhouse.md) | `atlas-clickhouse` | `clickhouse` |
+| [mongodb.md](mongodb.md) | `atlas-mongodb` | `mongodb` |
 | [redis.md](redis.md) | `atlas-redis` | `redis` |
 | [kafka.md](kafka.md) | `atlas-kafka` | `kafka` |
+| [ceph.md](ceph.md) | `atlas-ceph` | `ceph` |
+| [devops-stack.md](devops-stack.md) | `atlas-devops-stack` | `devops_stack` |
+| [mlops-stack.md](mlops-stack.md) | `atlas-mlops-stack` | `mlops_stack` |
+| [soc-stack.md](soc-stack.md) | `atlas-soc-stack` | `soc_stack` |
 
 Leaf DNS identity (`dns_domain_suffix` / `cluster_domain`) lives in each stack’s
 `atlas-*.yml` overlays — see [ADR 003](../adr/003-optional-cluster-yml.md)
 (no `group_vars/all/cluster.yml`).
 
 - Shared suffix: `./cluster init … --dns-suffix lab.example.com` (or edit YAML).
-- Stack prefix (`redis.` / `kafka.` / `pgsql.` / `k8s.` / …): choose the matching
+- Stack prefix (`redis.` / `kafka.` / `ceph.` / `devops.` / `mlops.` / `pgsql.` / `k8s.` / …): choose the matching
   `--template`, or edit `cluster_domain` in the overlays — init does not rewrite it.
 
 Back to [docs index](../README.md).

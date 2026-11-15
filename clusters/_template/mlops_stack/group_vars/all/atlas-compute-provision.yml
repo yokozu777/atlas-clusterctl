@@ -1,0 +1,15 @@
+###############################################################################
+# Cluster leaf: _template/mlops_stack — atlas-compute-provision overlay
+###############################################################################
+
+dns_domain_suffix: example.com
+cluster_domain: "mlops.{{ dns_domain_suffix }}"
+
+provision_stack: mlops
+provision_mode: recreate
+
+provision_hosts_file: "{{ cluster_inventory | default(cluster_config_dir ~ '/hosts', true) }}"
+provision_inventory_group_map_mlops:
+  mlops_stack: mlops_stack_node
+provision_tf_module_map_mlops:
+  mlops_stack_node: proxmox_mlops_stack

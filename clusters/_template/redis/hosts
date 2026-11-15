@@ -63,6 +63,7 @@ all:
           hosts:
             192.168.1.145:
               hostname: redis-master01.example.com
+              redis_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5714
               provision:
                 vmid: "5714"
                 sockets: 1
@@ -74,8 +75,14 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5714"
+                    serial: drive5714
             192.168.1.146:
               hostname: redis-master02.example.com
+              redis_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5715
               provision:
                 vmid: "5715"
                 sockets: 1
@@ -87,8 +94,14 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5714"
+                    serial: drive5714
             192.168.1.147:
               hostname: redis-master03.example.com
+              redis_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5716
               provision:
                 vmid: "5716"
                 sockets: 1
@@ -100,10 +113,16 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5715"
+                    serial: drive5715
         redis_cluster_replicas:
           hosts:
             192.168.1.148:
               hostname: redis-replica01.example.com
+              redis_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5717
               provision:
                 vmid: "5717"
                 sockets: 1
@@ -115,8 +134,14 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5716"
+                    serial: drive5716
             192.168.1.149:
               hostname: redis-replica02.example.com
+              redis_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5718
               provision:
                 vmid: "5718"
                 sockets: 1
@@ -128,8 +153,14 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5717"
+                    serial: drive5717
             192.168.1.150:
               hostname: redis-replica03.example.com
+              redis_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5719
               provision:
                 vmid: "5719"
                 sockets: 1
@@ -141,6 +172,11 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5718"
+                    serial: drive5718
   vars:
     ansible_python_interpreter: /usr/bin/python3
     ansible_ssh_user: localuser

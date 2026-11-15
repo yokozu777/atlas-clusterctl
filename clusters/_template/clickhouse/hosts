@@ -1,0 +1,178 @@
+all:
+  children:
+    clickhouse:
+      children:
+        ch_keeper:
+          hosts:
+            192.168.1.170:
+              hostname: keeper-01.clickhouse.example.com
+              clickhouse_keeper_id: 1
+              provision:
+                vmid: "5800"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.171:
+              hostname: keeper-02.clickhouse.example.com
+              clickhouse_keeper_id: 2
+              provision:
+                vmid: "5801"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.172:
+              hostname: keeper-03.clickhouse.example.com
+              clickhouse_keeper_id: 3
+              provision:
+                vmid: "5802"
+                sockets: 1
+                cores: 2
+                memory: 4096
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+        ch_cluster:
+          hosts:
+            192.168.1.173:
+              hostname: clickhouse-01.clickhouse.example.com
+              clickhouse_shard: 1
+              clickhouse_replica: 1
+              clickhouse_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5803
+              provision:
+                vmid: "5803"
+                sockets: 1
+                cores: 4
+                memory: 8192
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "100"
+                    slot: 0
+                    storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5803"
+                    serial: drive5803
+            192.168.1.174:
+              hostname: clickhouse-02.clickhouse.example.com
+              clickhouse_shard: 1
+              clickhouse_replica: 2
+              clickhouse_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5804
+              provision:
+                vmid: "5804"
+                sockets: 1
+                cores: 4
+                memory: 8192
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "100"
+                    slot: 0
+                    storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5804"
+                    serial: drive5804
+            192.168.1.175:
+              hostname: clickhouse-03.clickhouse.example.com
+              clickhouse_shard: 2
+              clickhouse_replica: 1
+              clickhouse_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5805
+              provision:
+                vmid: "5805"
+                sockets: 1
+                cores: 4
+                memory: 8192
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "100"
+                    slot: 0
+                    storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5805"
+                    serial: drive5805
+            192.168.1.176:
+              hostname: clickhouse-04.clickhouse.example.com
+              clickhouse_shard: 2
+              clickhouse_replica: 2
+              clickhouse_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5806
+              provision:
+                vmid: "5806"
+                sockets: 1
+                cores: 4
+                memory: 8192
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "100"
+                    slot: 0
+                    storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5806"
+                    serial: drive5806
+        ch_lbs:
+          hosts:
+            192.168.1.177:
+              hostname: clickhouse-lb-01.clickhouse.example.com
+              provision:
+                vmid: "5807"
+                sockets: 1
+                cores: 2
+                memory: 2048
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.178:
+              hostname: clickhouse-lb-02.clickhouse.example.com
+              provision:
+                vmid: "5808"
+                sockets: 1
+                cores: 2
+                memory: 2048
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+            192.168.1.179:
+              hostname: clickhouse-lb-03.clickhouse.example.com
+              provision:
+                vmid: "5809"
+                sockets: 1
+                cores: 2
+                memory: 2048
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_user: localuser

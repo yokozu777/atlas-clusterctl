@@ -1,0 +1,13 @@
+# Cluster leaf: _template/mongodb — atlas-compute-provision overlay
+
+dns_domain_suffix: example.com
+cluster_domain: "mongodb.{{ dns_domain_suffix }}"
+
+provision_stack: mongodb
+provision_mode: recreate
+
+provision_hosts_file: "{{ cluster_inventory | default(cluster_config_dir ~ '/hosts', true) }}"
+provision_inventory_group_map_mongodb:
+  mongo_cluster: mongo_cluster_node
+provision_tf_module_map_mongodb:
+  mongo_cluster_node: proxmox_mongo_cluster

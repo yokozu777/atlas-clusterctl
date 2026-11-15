@@ -1,0 +1,7 @@
+# Prepare the second data disk for the Compose stack (role 23_init_data_disk).
+# Target disk: provision.disks slot 1 (wwn/serial in hosts).
+prepare_data_disk: true
+prepare_data_disk_use_inventory: true
+prepare_data_disk_inventory_slot: "1"
+prepare_data_disk_mode: xfs
+prepare_data_disk_min_size_gib: 50

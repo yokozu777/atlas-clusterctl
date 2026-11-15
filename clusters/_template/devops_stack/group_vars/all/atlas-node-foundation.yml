@@ -1,0 +1,21 @@
+###############################################################################
+# Cluster leaf: _template/devops_stack — atlas-node-foundation overlay
+# -----------------------------------------------------------------------------
+# Purpose : OS bootstrap for devops_stack (init)
+# Defaults: sibling atlas-node-foundation group_vars/all/atlas-node-foundation.yml (+ roles/*/defaults)
+# Docs    : docs/stacks/devops-stack.md
+#           Must cover the same inventory groups as atlas-devops-stack limits.
+#
+# Prefer atlas-node-foundation.secrets.yml (or Vault) for passwords.
+###############################################################################
+
+# =============================================================================
+# Targeting
+# =============================================================================
+
+# Leaf DNS identity
+# (duplicated into every atlas-*.yml that uses leaf DNS / workspace id)
+dns_domain_suffix: example.com
+cluster_domain: "devops.{{ dns_domain_suffix }}" # Cluster FQDN, usually a name under the DNS suffix
+
+node_foundation_init_hosts: "devops_stack"

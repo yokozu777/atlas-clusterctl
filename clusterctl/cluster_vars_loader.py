@@ -15,7 +15,11 @@ from clusterctl.controller_extra_vars import strip_controller_contract_keys
 
 # Sibling product basenames (orchestrated overlays = <name>.yml + <name>.secrets.yml).
 CONVENTIONAL_PRODUCT_REPOS: tuple[str, ...] = (
+    "atlas-ceph",
     "atlas-compute-provision",
+    "atlas-devops-stack",
+    "atlas-mlops-stack",
+    "atlas-soc-stack",
     "atlas-gitlab-runner",
     "atlas-infra-edge",
     "atlas-jenkins-agent",
@@ -23,6 +27,8 @@ CONVENTIONAL_PRODUCT_REPOS: tuple[str, ...] = (
     "atlas-k8s-core",
     "atlas-kafka",
     "atlas-node-foundation",
+    "atlas-clickhouse",
+    "atlas-mongodb",
     "atlas-postgresql",
     "atlas-redis",
 )

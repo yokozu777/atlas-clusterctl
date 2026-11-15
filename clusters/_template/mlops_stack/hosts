@@ -1,0 +1,28 @@
+all:
+  children:
+    mlops:
+      children:
+        mlops_stack:
+          hosts:
+            192.168.1.191:
+              hostname: mlops-01.example.com
+              mlops_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5911
+              provision:
+                vmid: "5911"
+                sockets: 1
+                cores: 8
+                memory: 32768
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "50"
+                    slot: 0
+                    storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5911"
+                    serial: drive5911
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_user: localuser

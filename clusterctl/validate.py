@@ -42,6 +42,12 @@ from clusterctl.inventory import (
     INFRA_GROUPS,
     K8S_GROUPS,
     KAFKA_GROUPS,
+    CEPH_GROUPS,
+    DEVOPS_GROUPS,
+    MLOPS_GROUPS,
+    SOC_GROUPS,
+    CH_GROUPS,
+    MONGO_GROUPS,
     PGSQL_GROUPS,
     REDIS_GROUPS,
     extract_inventory_groups,
@@ -300,6 +306,10 @@ def _validate_phase_intent_vs_inventory(
     has_pgsql_groups = bool(groups & PGSQL_GROUPS)
     has_redis_groups = bool(groups & REDIS_GROUPS)
     has_kafka_groups = bool(groups & KAFKA_GROUPS)
+    has_ceph_groups = bool(groups & CEPH_GROUPS)
+    has_devops_groups = bool(groups & DEVOPS_GROUPS)
+    has_mlops_groups = bool(groups & MLOPS_GROUPS)
+    has_soc_groups = bool(groups & SOC_GROUPS)
     has_data = bool(groups & DATA_GROUPS)
 
     if flags.k8s and not has_k8s_groups:
@@ -408,11 +418,150 @@ def _validate_phase_intent_vs_inventory(
             hint="nest kafka_controllers and kafka_brokers under kafka",
         )
 
+    if flags.ceph and not has_ceph_groups:
+        report.add(
+            Severity.ERROR,
+            "phase_intent_ceph_no_inventory",
+            "phases include ceph but inventory has no ceph_nodes group",
+            hint="add ceph_nodes in hosts or remove atlas-ceph/cluster from phases:",
+        )
+    if not flags.ceph and has_ceph_groups:
+        report.add(
+            Severity.WARNING,
+            "inventory_ceph_phases_omitted",
+            "inventory defines ceph groups but phases: omit ceph refs",
+            hint="add atlas-ceph/cluster to phases: or drop ceph_nodes inventory group",
+        )
+    if "ceph" in groups and not has_ceph_groups:
+        report.add(
+            Severity.WARNING,
+            "inventory_ceph_parent_empty",
+            "inventory has ceph parent group but no ceph_nodes child group",
+            hint="nest ceph_nodes under ceph",
+        )
+
+    if flags.devops and not has_devops_groups:
+        report.add(
+            Severity.ERROR,
+            "phase_intent_devops_no_inventory",
+            "phases include devops but inventory has no devops_stack group",
+            hint="add devops_stack in hosts or remove atlas-devops-stack/stack from phases:",
+        )
+    if not flags.devops and has_devops_groups:
+        report.add(
+            Severity.WARNING,
+            "inventory_devops_phases_omitted",
+            "inventory defines devops groups but phases: omit devops refs",
+            hint="add atlas-devops-stack/stack to phases: or drop devops_stack inventory group",
+        )
+    if "devops" in groups and not has_devops_groups:
+        report.add(
+            Severity.WARNING,
+            "inventory_devops_parent_empty",
+            "inventory has devops parent group but no devops_stack child group",
+            hint="nest devops_stack under devops",
+        )
+
+    if flags.mlops and not has_mlops_groups:
+        report.add(
+            Severity.ERROR,
+            "phase_intent_mlops_no_inventory",
+            "phases include mlops but inventory has no mlops_stack group",
+            hint="add mlops_stack in hosts or remove atlas-mlops-stack/stack from phases:",
+        )
+    if not flags.mlops and has_mlops_groups:
+        report.add(
+            Severity.WARNING,
+            "inventory_mlops_phases_omitted",
+            "inventory defines mlops groups but phases: omit mlops refs",
+            hint="add atlas-mlops-stack/stack to phases: or drop mlops_stack inventory group",
+        )
+    if "mlops" in groups and not has_mlops_groups:
+        report.add(
+            Severity.WARNING,
+            "inventory_mlops_parent_empty",
+            "inventory has mlops parent group but no mlops_stack child group",
+            hint="nest mlops_stack under mlops",
+        )
+
+    if flags.soc and not has_soc_groups:
+        report.add(
+            Severity.ERROR,
+            "phase_intent_soc_no_inventory",
+            "phases include soc but inventory has no soc_stack group",
+            hint="add soc_stack in hosts or remove atlas-soc-stack/stack from phases:",
+        )
+    if not flags.soc and has_soc_groups:
+        report.add(
+            Severity.WARNING,
+            "inventory_soc_phases_omitted",
+            "inventory defines soc groups but phases: omit soc refs",
+            hint="add atlas-soc-stack/stack to phases: or drop soc_stack inventory group",
+        )
+    if "soc" in groups and not has_soc_groups:
+        report.add(
+            Severity.WARNING,
+            "inventory_soc_parent_empty",
+            "inventory has soc parent group but no soc_stack child group",
+            hint="nest soc_stack under soc",
+        )
+    has_ch_groups = bool(groups & CH_GROUPS)
+    if flags.clickhouse and not has_ch_groups:
+        report.add(
+            Severity.ERROR,
+            "phase_intent_clickhouse_no_inventory",
+            "phases include clickhouse but inventory has no "
+            "ch_keeper/ch_cluster/ch_lbs groups",
+            hint="add ch_* groups in hosts or remove atlas-clickhouse/cluster from phases:",
+        )
+    if not flags.clickhouse and has_ch_groups:
+        report.add(
+            Severity.WARNING,
+            "inventory_clickhouse_phases_omitted",
+            "inventory defines clickhouse groups but phases: omit clickhouse refs",
+            hint="add atlas-clickhouse/cluster to phases: or drop ch_* inventory groups",
+        )
+    if "clickhouse" in groups and not has_ch_groups:
+        report.add(
+            Severity.WARNING,
+            "inventory_clickhouse_parent_empty",
+            "inventory has clickhouse parent group but no ch_* child groups",
+            hint="nest ch_keeper, ch_cluster, and ch_lbs under clickhouse",
+        )
+    has_mongo_groups = bool(groups & MONGO_GROUPS)
+    if flags.mongodb and not has_mongo_groups:
+        report.add(
+            Severity.ERROR,
+            "phase_intent_mongodb_no_inventory",
+            "phases include mongodb but inventory has no mongo_cluster group",
+            hint="add mongo_cluster in hosts or remove atlas-mongodb/cluster from phases:",
+        )
+    if not flags.mongodb and has_mongo_groups:
+        report.add(
+            Severity.WARNING,
+            "inventory_mongodb_phases_omitted",
+            "inventory defines mongo_cluster but phases: omit mongodb refs",
+            hint="add atlas-mongodb/cluster to phases: or drop the mongo_cluster group",
+        )
+    if "mongodb" in groups and not has_mongo_groups:
+        report.add(
+            Severity.WARNING,
+            "inventory_mongodb_parent_empty",
+            "inventory has mongodb parent group but no mongo_cluster child group",
+            hint="nest mongo_cluster under mongodb",
+        )
+
     if flags.data and not has_data and flags.provision_stack not in {
         "postgresql",
         "mysql",
         "redis",
         "kafka",
+        "ceph",
+        "devops",
+        "mlops",
+        "soc",
+        "clickhouse",
+        "mongodb",
     }:
         report.add(
             Severity.WARNING,
@@ -975,7 +1124,7 @@ def validate_cluster(
         (
             f"phase intent: infra={flags.infra} k8s={flags.k8s} "
             f"postgresql={flags.postgresql} mysql={flags.mysql} redis={flags.redis} "
-            f"kafka={flags.kafka} "
+            f"kafka={flags.kafka} ceph={flags.ceph} devops={flags.devops} mlops={flags.mlops} "
             f"(provision_stack={flags.provision_stack})"
         ),
     )

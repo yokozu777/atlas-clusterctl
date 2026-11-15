@@ -20,6 +20,8 @@ TEMPLATE_ROOT = REPO_ROOT / "clusters" / "_template"
 PRODUCT_REPOS: tuple[str, ...] = (
     "atlas-redis",
     "atlas-kafka",
+    "atlas-clickhouse",
+    "atlas-mongodb",
     "atlas-postgresql",
     "atlas-jenkins-agent",
     "atlas-gitlab-runner",
@@ -28,11 +30,20 @@ PRODUCT_REPOS: tuple[str, ...] = (
     "atlas-k8s-addons",
     "atlas-compute-provision",
     "atlas-node-foundation",
+    "atlas-devops-stack",
+    "atlas-mlops-stack",
+    "atlas-soc-stack",
 )
 
 LEAF_PRODUCTS: dict[str, tuple[str, ...]] = {
     "redis": ("atlas-redis", "atlas-compute-provision", "atlas-node-foundation"),
     "kafka": ("atlas-kafka", "atlas-compute-provision", "atlas-node-foundation"),
+    "ceph": ("atlas-ceph", "atlas-compute-provision", "atlas-node-foundation"),
+    "devops_stack": ("atlas-devops-stack", "atlas-compute-provision", "atlas-node-foundation"),
+    "mlops_stack": ("atlas-mlops-stack", "atlas-compute-provision", "atlas-node-foundation"),
+    "soc_stack": ("atlas-soc-stack", "atlas-compute-provision", "atlas-node-foundation"),
+    "clickhouse": ("atlas-clickhouse", "atlas-compute-provision", "atlas-node-foundation"),
+    "mongodb": ("atlas-mongodb", "atlas-compute-provision", "atlas-node-foundation"),
     "postgresql": ("atlas-postgresql", "atlas-compute-provision", "atlas-node-foundation"),
     "jenkins_agent": ("atlas-jenkins-agent", "atlas-compute-provision", "atlas-node-foundation"),
     "gitlab_runner": ("atlas-gitlab-runner", "atlas-compute-provision", "atlas-node-foundation"),
@@ -48,6 +59,12 @@ LEAF_PRODUCTS: dict[str, tuple[str, ...]] = {
 LEAF_STACK: dict[str, str] = {
     "redis": "redis",
     "kafka": "kafka",
+    "ceph": "ceph",
+    "devops_stack": "devops",
+    "mlops_stack": "mlops",
+    "soc_stack": "soc",
+    "clickhouse": "clickhouse",
+    "mongodb": "mongodb",
     "postgresql": "postgresql",
     "jenkins_agent": "jenkins",
     "gitlab_runner": "gitlab_runner",
@@ -56,7 +73,7 @@ LEAF_STACK: dict[str, str] = {
 }
 
 ALL_STACKS: frozenset[str] = frozenset(
-    {"redis", "kafka", "postgresql", "jenkins", "gitlab_runner", "infra", "k8s"}
+    {"redis", "kafka", "ceph", "devops", "mlops", "soc", "postgresql", "clickhouse", "mongodb", "jenkins", "gitlab_runner", "infra", "k8s"}
 )
 
 # Identity / controller / workspace — sibling-standalone only (not template/inventory SoT).
@@ -256,6 +273,8 @@ PARITY_EXCLUDE: frozenset[str] = frozenset(
 SECRET_FORBIDDEN_IN_CATALOG: dict[str, frozenset[str]] = {
     "atlas-redis": frozenset({"vip_auth_pass", "redis_requirepass"}),
     "atlas-kafka": frozenset(),
+    "atlas-clickhouse": frozenset({"clickhouse_default_password", "vip_auth_pass"}),
+    "atlas-mongodb": frozenset({"mongodb_admin_password", "mongodb_keyfile"}),
     "atlas-postgresql": frozenset(
         {"vip_auth_pass", "pgsql_postgres_password", "pgsql_replicator_password"}
     ),
@@ -323,11 +342,81 @@ SECRET_FORBIDDEN_IN_CATALOG: dict[str, frozenset[str]] = {
             "vault_admin_password",
         }
     ),
+    "atlas-devops-stack": frozenset(
+        {
+            "devops_nexus_admin_password",
+            "devops_gitlab_root_password",
+            "devops_jenkins_admin_password",
+            "devops_gitea_admin_password",
+            "devops_sonar_admin_password",
+            "devops_sonar_db_password",
+            "devops_defectdojo_admin_password",
+            "devops_defectdojo_db_password",
+            "devops_defectdojo_secret_key",
+            "devops_defectdojo_credential_aes_key",
+            "devops_wiki_admin_password",
+            "devops_wiki_db_password",
+            "devops_harbor_admin_password",
+            "devops_harbor_db_password",
+            "devops_harbor_core_secret",
+            "devops_harbor_jobservice_secret",
+            "devops_openbao_admin_password",
+            "devops_portainer_admin_password",
+            "devops_dns_tsig_secret",
+            "devops_stepca_provisioner_password",
+        }
+    ),
+    "atlas-mlops-stack": frozenset(
+        {
+            "mlops_postgres_password",
+            "mlops_mlflow_db_password",
+            "mlops_mlflow_admin_password",
+            "mlops_airflow_db_password",
+            "mlops_airflow_admin_password",
+            "mlops_airflow_web_secret",
+            "mlops_superset_db_password",
+            "mlops_superset_admin_password",
+            "mlops_superset_secret_key",
+            "mlops_redis_password",
+            "mlops_jupyterhub_admin_password",
+            "mlops_portainer_admin_password",
+            "mlops_dns_tsig_secret",
+            "mlops_stepca_provisioner_password",
+        }
+    ),
+    "atlas-soc-stack": frozenset(
+        {
+            "soc_iris_db_password",
+            "soc_iris_rabbitmq_password",
+            "soc_iris_secret_key",
+            "soc_iris_password_salt",
+            "soc_iris_admin_password",
+            "soc_wazuh_indexer_password",
+            "soc_wazuh_dashboard_password",
+            "soc_wazuh_api_password",
+            "soc_cortex_secret_key",
+            "soc_misp_db_password",
+            "soc_misp_db_root_password",
+            "soc_misp_redis_password",
+            "soc_misp_admin_password",
+            "soc_misp_admin_key",
+            "soc_greenbone_db_password",
+            "soc_greenbone_admin_password",
+            "soc_shuffle_admin_password",
+            "soc_shuffle_opensearch_password",
+            "soc_shuffle_api_key",
+            "soc_portainer_admin_password",
+            "soc_dns_tsig_secret",
+            "soc_stepca_provisioner_password",
+        }
+    ),
 }
 
 # Active keys required in sibling/template *.secrets.yml (scaffolds use CHANGEME).
 SECRET_REQUIRED_IN_SECRETS: dict[str, frozenset[str]] = {
     "atlas-redis": frozenset({"vip_auth_pass", "redis_requirepass"}),
+    "atlas-clickhouse": frozenset({"clickhouse_default_password", "vip_auth_pass"}),
+    "atlas-mongodb": frozenset({"mongodb_admin_password", "mongodb_keyfile"}),
     "atlas-postgresql": frozenset(
         {"vip_auth_pass", "pgsql_postgres_password", "pgsql_replicator_password"}
     ),
@@ -388,11 +477,81 @@ SECRET_REQUIRED_IN_SECRETS: dict[str, frozenset[str]] = {
             "vault_admin_password",
         }
     ),
+    "atlas-devops-stack": frozenset(
+        {
+            "devops_nexus_admin_password",
+            "devops_gitlab_root_password",
+            "devops_jenkins_admin_password",
+            "devops_gitea_admin_password",
+            "devops_sonar_admin_password",
+            "devops_sonar_db_password",
+            "devops_defectdojo_admin_password",
+            "devops_defectdojo_db_password",
+            "devops_defectdojo_secret_key",
+            "devops_defectdojo_credential_aes_key",
+            "devops_wiki_admin_password",
+            "devops_wiki_db_password",
+            "devops_harbor_admin_password",
+            "devops_harbor_db_password",
+            "devops_harbor_core_secret",
+            "devops_harbor_jobservice_secret",
+            "devops_openbao_admin_password",
+            "devops_portainer_admin_password",
+            "devops_dns_tsig_secret",
+            "devops_stepca_provisioner_password",
+        }
+    ),
+    "atlas-mlops-stack": frozenset(
+        {
+            "mlops_postgres_password",
+            "mlops_mlflow_db_password",
+            "mlops_mlflow_admin_password",
+            "mlops_airflow_db_password",
+            "mlops_airflow_admin_password",
+            "mlops_airflow_web_secret",
+            "mlops_superset_db_password",
+            "mlops_superset_admin_password",
+            "mlops_superset_secret_key",
+            "mlops_redis_password",
+            "mlops_jupyterhub_admin_password",
+            "mlops_portainer_admin_password",
+            "mlops_dns_tsig_secret",
+            "mlops_stepca_provisioner_password",
+        }
+    ),
+    "atlas-soc-stack": frozenset(
+        {
+            "soc_iris_db_password",
+            "soc_iris_rabbitmq_password",
+            "soc_iris_secret_key",
+            "soc_iris_password_salt",
+            "soc_iris_admin_password",
+            "soc_wazuh_indexer_password",
+            "soc_wazuh_dashboard_password",
+            "soc_wazuh_api_password",
+            "soc_cortex_secret_key",
+            "soc_misp_db_password",
+            "soc_misp_db_root_password",
+            "soc_misp_redis_password",
+            "soc_misp_admin_password",
+            "soc_misp_admin_key",
+            "soc_greenbone_db_password",
+            "soc_greenbone_admin_password",
+            "soc_shuffle_admin_password",
+            "soc_shuffle_opensearch_password",
+            "soc_shuffle_api_key",
+            "soc_portainer_admin_password",
+            "soc_dns_tsig_secret",
+            "soc_stepca_provisioner_password",
+        }
+    ),
 }
 
 # Inventory labs: only secrets that Phase 4 actually materialised (site-specific).
 INVENTORY_SECRET_REQUIRED: dict[str, frozenset[str]] = {
     "atlas-redis": frozenset({"vip_auth_pass", "redis_requirepass"}),
+    "atlas-clickhouse": frozenset({"clickhouse_default_password", "vip_auth_pass"}),
+    "atlas-mongodb": frozenset({"mongodb_admin_password", "mongodb_keyfile"}),
     "atlas-postgresql": frozenset(
         {"vip_auth_pass", "pgsql_postgres_password", "pgsql_replicator_password"}
     ),

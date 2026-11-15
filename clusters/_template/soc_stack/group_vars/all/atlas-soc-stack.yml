@@ -1,0 +1,107 @@
+# SOC compose stack lab application vars
+# Orchestration contract: docs/stacks/soc-stack.md
+
+# atlas-soc-stack — variable catalog for standalone runs
+# Secrets: group_vars/all/atlas-soc-stack.secrets.yml
+# Disk: set soc_data_disk on the host, not in this file.
+
+soc_stack_hosts: soc_stack
+
+dns_domain_suffix: example.com
+cluster_domain: "soc.{{ dns_domain_suffix }}"
+cluster_workspace_id: "{{ lookup('ansible.builtin.env', 'CLUSTER_WORKSPACE_ID') | default(cluster_domain, true) }}"
+cluster_workspace_parent: ./workspace
+cluster_workspace_root: "{{ cluster_workspace_parent }}/{{ cluster_workspace_id }}"
+
+ansible_user: localuser
+
+soc_vhost_labels:
+  - iris
+  - wazuh
+  - cortex
+  - misp
+  - greenbone
+  - shuffle
+  - portainer
+  - heimdall
+soc_vhost_fqdns: "{{ soc_vhost_labels | product(['.' ~ cluster_domain]) | map('join') | list }}"
+
+soc_data_mount: /var/lib/soc-data
+soc_install_dir: /var/lib/soc-data/atlas-soc-stack
+soc_http_port: 80
+soc_https_port: 443
+soc_wazuh_agent_port: 1514
+soc_wazuh_enroll_port: 1515
+soc_firewalld_enabled: true
+
+soc_image_nginx: nginx:1.28.3
+soc_image_postgres: postgres:16.10-alpine
+soc_image_mariadb: mariadb:10.11.13
+soc_image_redis: redis:7.4-alpine
+soc_image_rabbitmq: rabbitmq:3.13.7-management-alpine
+soc_image_elasticsearch: elasticsearch:7.17.28
+soc_image_opensearch: opensearchproject/opensearch:3.2.0
+
+soc_image_iris: ghcr.io/dfir-iris/iriswebapp_app:v2.4.20
+soc_image_iris_db: ghcr.io/dfir-iris/iriswebapp_db:v2.4.20
+soc_image_wazuh_manager: wazuh/wazuh-manager:4.14.9
+soc_image_wazuh_indexer: wazuh/wazuh-indexer:4.14.9
+soc_image_wazuh_dashboard: wazuh/wazuh-dashboard:4.14.9
+soc_image_wazuh_certs: wazuh/wazuh-certs-generator:0.0.4
+soc_image_cortex: thehiveproject/cortex:3.1.7-1
+soc_image_misp: ghcr.io/misp/misp-docker/misp-core:v2.5.50
+soc_image_misp_nginx: ghcr.io/misp/misp-docker/misp-nginx:v2.5.50
+soc_image_misp_modules: ghcr.io/misp/misp-docker/misp-modules:v3.1.1
+soc_image_greenbone_tag: stable
+soc_image_greenbone_feed_tag: community
+soc_image_shuffle_frontend: ghcr.io/shuffle/shuffle-frontend:2.1.1
+soc_image_shuffle_backend: ghcr.io/shuffle/shuffle-backend:2.1.1
+soc_image_shuffle_orborus: ghcr.io/shuffle/shuffle-orborus:2.1.1
+soc_image_portainer: portainer/portainer-ce:2.45.3
+soc_image_heimdall: linuxserver/heimdall:2.8.4
+
+soc_iris_state: present
+soc_wazuh_state: present
+soc_cortex_state: present
+soc_misp_state: present
+soc_greenbone_state: present
+soc_shuffle_state: present
+soc_portainer_state: present
+soc_heimdall_state: present
+
+soc_iris_admin_user: administrator
+soc_misp_admin_email: admin@localhost
+soc_misp_admin_org: Atlas
+soc_shuffle_admin_user: admin
+soc_greenbone_admin_user: admin
+
+soc_secret_pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{7,}$"
+soc_http_ok_codes:
+  - 200
+  - 201
+  - 204
+  - 301
+  - 302
+  - 303
+  - 307
+  - 308
+  - 401
+  - 403
+soc_verify_retries: 60
+soc_verify_delay: 10
+
+soc_dns_server: "{{ dns_server_ip | default('') }}"
+soc_dns_zone: "{{ dns_domain_suffix | default('example.com') }}"
+soc_dns_tsig_key: "{{ dns_domain_suffix | default('example.com') }}"
+soc_dns_tsig_algorithm: hmac-sha256
+soc_dns_ttl: 300
+
+soc_stepca_enabled: true
+soc_stepca_host: "{{ pki_ca_host | default('ca.' ~ (dns_domain_suffix | default('example.com'))) }}"
+soc_stepca_port: "{{ stepca_https_port | default(8443) }}"
+soc_stepca_provisioner: "{{ stepca_init_provisioner_name | default('admin') }}"
+soc_stepca_image: "{{ stepca_image | default('smallstep/step-ca:0.28.4') }}"
+soc_stepca_duration: 2160h
+soc_tls_cert_file: /etc/atlas/certs/soc-fullchain.crt
+soc_tls_key_file: /etc/atlas/certs/soc.key
+soc_tls_days: "825"

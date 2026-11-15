@@ -1,0 +1,6 @@
+# Cluster leaf: _template/clickhouse — atlas-node-foundation overlay
+
+dns_domain_suffix: example.com
+cluster_domain: "clickhouse.{{ dns_domain_suffix }}"
+
+node_foundation_init_hosts: "ch_keeper:ch_cluster:ch_lbs"

@@ -52,6 +52,7 @@ all:
             192.168.1.174:
               hostname: kafka-broker01.example.com
               kafka_node_id: 101
+              kafka_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5733
               provision:
                 vmid: "5733"
                 sockets: 1
@@ -63,9 +64,15 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5733"
+                    serial: drive5733
             192.168.1.175:
               hostname: kafka-broker02.example.com
               kafka_node_id: 102
+              kafka_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5734
               provision:
                 vmid: "5734"
                 sockets: 1
@@ -77,9 +84,15 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5733"
+                    serial: drive5733
             192.168.1.176:
               hostname: kafka-broker03.example.com
               kafka_node_id: 103
+              kafka_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5735
               provision:
                 vmid: "5735"
                 sockets: 1
@@ -91,6 +104,11 @@ all:
                   - size: "50"
                     slot: 0
                     storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5734"
+                    serial: drive5734
   vars:
     ansible_python_interpreter: /usr/bin/python3
     ansible_ssh_user: localuser

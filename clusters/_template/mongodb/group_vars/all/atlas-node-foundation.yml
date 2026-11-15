@@ -1,0 +1,6 @@
+# Cluster leaf: _template/mongodb — atlas-node-foundation overlay
+
+dns_domain_suffix: example.com
+cluster_domain: "mongodb.{{ dns_domain_suffix }}"
+
+node_foundation_init_hosts: "mongo_cluster"

@@ -1,0 +1,36 @@
+# Cluster leaf: _template/clickhouse — atlas-clickhouse overlay
+
+dns_domain_suffix: example.com
+cluster_domain: "clickhouse.{{ dns_domain_suffix }}"
+
+clickhouse_keeper_hosts: ch_keeper
+clickhouse_cluster_hosts: ch_cluster
+clickhouse_lb_hosts: ch_lbs
+
+cluster_workspace_id: "{{ lookup('ansible.builtin.env', 'CLUSTER_WORKSPACE_ID') | default(cluster_domain, true) }}"
+cluster_workspace_parent: ./workspace
+cluster_workspace_root: "{{ cluster_workspace_parent }}/{{ cluster_workspace_id }}"
+
+ansible_user: localuser
+
+clickhouse_version: "25.8"
+clickhouse_cluster_name: atlas
+
+vip_address: 192.168.1.131
+virtual_router_id: 61
+
+clickhouse_http_port: 8123
+clickhouse_native_port: 9000
+clickhouse_interserver_port: 9009
+clickhouse_keeper_port: 9181
+clickhouse_keeper_raft_port: 9234
+clickhouse_keeper_data_dir: /var/lib/clickhouse-keeper
+
+haproxy_maxconn: 4096
+haproxy_timeout_connect: 5s
+haproxy_timeout_client: 50s
+haproxy_timeout_server: 50s
+haproxy_stats_bind: "127.0.0.1:8404"
+haproxy_stats_uri: /stats
+
+clickhouse_secret_pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{7,}$"

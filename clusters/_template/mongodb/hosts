@@ -1,0 +1,66 @@
+all:
+  children:
+    mongodb:
+      children:
+        mongo_cluster:
+          hosts:
+            192.168.1.160:
+              hostname: mongo-01.mongodb.example.com
+              mongodb_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5820
+              provision:
+                vmid: "5820"
+                sockets: 1
+                cores: 4
+                memory: 8192
+                numa: false
+                clone: ubuntu-base
+                disks:
+                  - size: "100"
+                    slot: 0
+                    storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5820"
+                    serial: drive5820
+            192.168.1.161:
+              hostname: mongo-02.mongodb.example.com
+              mongodb_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5821
+              provision:
+                vmid: "5821"
+                sockets: 1
+                cores: 4
+                memory: 8192
+                numa: false
+                clone: oracle-base
+                disks:
+                  - size: "100"
+                    slot: 0
+                    storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5821"
+                    serial: drive5821
+            192.168.1.162:
+              hostname: mongo-03.mongodb.example.com
+              mongodb_data_disk: /dev/disk/by-id/wwn-0x5000c500c35c5822
+              provision:
+                vmid: "5822"
+                sockets: 1
+                cores: 4
+                memory: 8192
+                numa: false
+                clone: debian-base
+                disks:
+                  - size: "100"
+                    slot: 0
+                    storage: local-zfs
+                  - size: "200"
+                    slot: 1
+                    storage: local-zfs
+                    wwn: "0x5000c500c35c5822"
+                    serial: drive5822
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_user: localuser

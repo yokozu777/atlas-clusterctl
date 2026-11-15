@@ -1,0 +1,20 @@
+# Cluster leaf: _template/mongodb — atlas-mongodb overlay
+
+dns_domain_suffix: example.com
+cluster_domain: "mongodb.{{ dns_domain_suffix }}"
+
+mongodb_hosts: mongo_cluster
+
+cluster_workspace_id: "{{ lookup('ansible.builtin.env', 'CLUSTER_WORKSPACE_ID') | default(cluster_domain, true) }}"
+cluster_workspace_parent: ./workspace
+cluster_workspace_root: "{{ cluster_workspace_parent }}/{{ cluster_workspace_id }}"
+
+ansible_user: localuser
+
+mongodb_version: "9.0"
+mongodb_replset_name: atlas
+mongodb_port: 27017
+mongodb_admin_user: admin
+mongodb_data_dir: /var/lib/mongodb
+mongodb_keyfile_path: /etc/mongodb/keyfile
+mongodb_secret_pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{7,}$"

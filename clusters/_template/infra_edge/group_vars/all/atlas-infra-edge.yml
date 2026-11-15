@@ -251,6 +251,9 @@ containerd_registry_mirrors:
   - dir_name: ghcr.io
     server: "https://ghcr.io"
     mirror_path: ghcr.io
+  - dir_name: lscr.io
+    server: "https://lscr.io"
+    mirror_path: lscr.io
   # Docker Hub vanity: dedicated pull-through to https://cr.fluentbit.io cannot do Bearer.
   # Share the docker.io proxy (duplicate server is skipped in compose render).
   - dir_name: cr.fluentbit.io

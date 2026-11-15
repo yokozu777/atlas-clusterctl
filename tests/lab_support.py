@@ -21,9 +21,15 @@ STACK_MARKERS: dict[str, frozenset[str]] = {
     "k8s": frozenset({"atlas-k8s-core"}),
     "jenkins": frozenset({"atlas-jenkins-agent"}),
     "gitlab": frozenset({"atlas-gitlab-runner"}),
+    "clickhouse": frozenset({"atlas-clickhouse"}),
+    "mongodb": frozenset({"atlas-mongodb"}),
     "postgresql": frozenset({"atlas-postgresql"}),
     "redis": frozenset({"atlas-redis"}),
     "kafka": frozenset({"atlas-kafka"}),
+    "ceph": frozenset({"atlas-ceph"}),
+    "devops": frozenset({"atlas-devops-stack"}),
+    "mlops": frozenset({"atlas-mlops-stack"}),
+    "soc": frozenset({"atlas-soc-stack"}),
     "infra": frozenset({"atlas-infra-edge"}),
     "pve_templates": frozenset({"atlas-compute-provision"}),
 }
@@ -35,6 +41,8 @@ PUBLIC_INFRA_TEMPLATE = ROOT / "clusters" / "_template" / "infra_edge"
 PUBLIC_REDIS_TEMPLATE = ROOT / "clusters" / "_template" / "redis"
 PUBLIC_POSTGRESQL_TEMPLATE = ROOT / "clusters" / "_template" / "postgresql"
 PUBLIC_KAFKA_TEMPLATE = ROOT / "clusters" / "_template" / "kafka"
+PUBLIC_CEPH_TEMPLATE = ROOT / "clusters" / "_template" / "ceph"
+PUBLIC_DEVOPS_TEMPLATE = ROOT / "clusters" / "_template" / "devops_stack"
 
 # Full k8s playbooks/phases invocation count — public ``_template/k8s_full``
 # and any discovered k8s lab (provision + init + core + addons).
@@ -230,6 +238,8 @@ __all__ = (
     "PUBLIC_REDIS_TEMPLATE",
     "PUBLIC_POSTGRESQL_TEMPLATE",
     "PUBLIC_KAFKA_TEMPLATE",
+    "PUBLIC_CEPH_TEMPLATE",
+    "PUBLIC_DEVOPS_TEMPLATE",
     "ROOT",
     "assert_known_labs_subset",
     "foundation_has_pkg_repos_key",

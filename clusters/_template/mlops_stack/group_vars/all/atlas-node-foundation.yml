@@ -1,0 +1,8 @@
+###############################################################################
+# Cluster leaf: _template/mlops_stack — atlas-node-foundation overlay
+###############################################################################
+
+dns_domain_suffix: example.com
+cluster_domain: "mlops.{{ dns_domain_suffix }}"
+
+node_foundation_init_hosts: "mlops_stack"

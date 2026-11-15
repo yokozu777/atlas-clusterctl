@@ -1,0 +1,15 @@
+###############################################################################
+# Cluster leaf: _template/soc_stack — atlas-compute-provision overlay
+###############################################################################
+
+dns_domain_suffix: example.com
+cluster_domain: "soc.{{ dns_domain_suffix }}"
+
+provision_stack: soc
+provision_mode: recreate
+
+provision_hosts_file: "{{ cluster_inventory | default(cluster_config_dir ~ '/hosts', true) }}"
+provision_inventory_group_map_soc:
+  soc_stack: soc_stack_node
+provision_tf_module_map_soc:
+  soc_stack_node: proxmox_soc_stack
